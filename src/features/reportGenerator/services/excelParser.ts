@@ -1,4 +1,4 @@
-import * as XLSX from "xlsx";
+import ExcelJS from "exceljs";
 
 import {
   isBlankRow,
@@ -17,27 +17,68 @@ import type { MatrixCell, ResultRow, SheetMatrix, SummaryData } from "../types";
 import { cleanText, toNumber } from "../utils/format";
 import { getHeaderIndexes, type HeaderIndexes } from "./parsing/sectionHelpers";
 
-
 function getCellTextOrLink(
-  sheet: XLSX.WorkSheet,
+  sheet: ExcelJS.Worksheet,
   rowIndex: number,
   columnIndex?: number
 ): string {
   if (columnIndex == null) return "";
 
-  const cellAddress = XLSX.utils.encode_cell({ r: rowIndex, c: columnIndex });
-  const cell = sheet[cellAddress] as
-    | (XLSX.CellObject & { l?: { Target?: string } })
-    | undefined;
+  const cell = sheet.getRow(rowIndex + 1).getCell(columnIndex + 1);
+  const cellValue = cell.value;
 
-  if (cell?.t === "e") {
-    return cleanText(cell?.l?.Target);
+  if (cellValue && typeof cellValue === "object") {
+    if ("hyperlink" in cellValue) {
+      return cleanText(cellValue.text || cellValue.hyperlink);
+    }
+
+    if ("text" in cellValue) {
+      return cleanText(cellValue.text);
+    }
+
+    if ("result" in cellValue) {
+      return cleanText(cellValue.result);
+    }
+
+    if ("error" in cellValue) {
+      return "";
+    }
   }
 
-  const textValue = cleanText(cell?.v);
+  const textValue = cleanText(cell.text);
   if (textValue) return textValue;
 
-  return cleanText(cell?.l?.Target);
+  return cleanText(cellValue);
+}
+
+function worksheetToMatrix(sheet: ExcelJS.Worksheet): SheetMatrix {
+  const matrix: SheetMatrix = [];
+  let maxColumnCount = 0;
+
+  sheet.eachRow({ includeEmpty: true }, (row, rowNumber) => {
+    const actualCellCount = row.cellCount;
+    if (actualCellCount > maxColumnCount) {
+      maxColumnCount = actualCellCount;
+    }
+
+    const normalizedRow: MatrixCell[] = [];
+
+    for (let columnIndex = 1; columnIndex <= actualCellCount; columnIndex += 1) {
+      const cellValue = row.getCell(columnIndex).value;
+      normalizedRow.push(cellValue == null ? null : (cellValue as MatrixCell));
+    }
+
+    matrix[rowNumber - 1] = normalizedRow;
+  });
+
+  for (let rowIndex = 0; rowIndex < matrix.length; rowIndex += 1) {
+    const row = matrix[rowIndex] ?? [];
+    if (row.length < maxColumnCount) {
+      matrix[rowIndex] = [...row, ...Array(maxColumnCount - row.length).fill(null)];
+    }
+  }
+
+  return matrix;
 }
 
 function getSectionUnitType(
@@ -59,7 +100,7 @@ function getSectionUnitType(
 }
 
 function extractSectionRows(
-  sheet: XLSX.WorkSheet,
+  sheet: ExcelJS.Worksheet,
   matrix: SheetMatrix,
   headerRowIndex: number,
   endRowIndexExclusive: number,
@@ -140,7 +181,7 @@ function extractSectionRows(
 }
 
 function extractRowsFromMatrix(
-  sheet: XLSX.WorkSheet,
+  sheet: ExcelJS.Worksheet,
   sheetName: string,
   matrix: SheetMatrix,
   embeddedPhotos?: Map<string, string>,
@@ -240,35 +281,28 @@ export function parseWorkbook(file: File): Promise<SummaryData> {
         if (!data) throw new Error("Could not read the file contents.");
 
         const workbookData = data as ArrayBuffer;
-        const workbook = XLSX.read(workbookData, { type: "array" });
-        const embeddedPhotos = await extractEmbeddedPhotos(
-          workbookData,
-          workbook.SheetNames
-        );
+        const workbook = new ExcelJS.Workbook();
+        await workbook.xlsx.load(workbookData);
+
+        const sheetNames = workbook.worksheets.map((sheet) => sheet.name);
+
+        const embeddedPhotos = await extractEmbeddedPhotos(workbookData, sheetNames);
         const richValueImages = await extractRichValueImages(workbookData);
-        const sheetVmMappings = await extractSheetVmMappings(
-          workbookData,
-          workbook.SheetNames
-        );
+        const sheetVmMappings = await extractSheetVmMappings(workbookData, sheetNames);
+
         const allRows: ResultRow[] = [];
 
-        workbook.SheetNames.forEach((sheetName) => {
-          const sheet = workbook.Sheets[sheetName];
-          const matrix = XLSX.utils.sheet_to_json<MatrixCell[]>(sheet, {
-            header: 1,
-            raw: true,
-            blankrows: true,
-            defval: null,
-          }) as SheetMatrix;
+        workbook.worksheets.forEach((sheet) => {
+          const matrix = worksheetToMatrix(sheet);
 
           allRows.push(
             ...extractRowsFromMatrix(
               sheet,
-              sheetName,
+              sheet.name,
               matrix,
-              embeddedPhotos.get(sheetName),
+              embeddedPhotos.get(sheet.name),
               richValueImages,
-              sheetVmMappings.get(sheetName)
+              sheetVmMappings.get(sheet.name)
             )
           );
         });

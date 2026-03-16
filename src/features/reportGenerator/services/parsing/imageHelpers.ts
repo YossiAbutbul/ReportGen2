@@ -1,5 +1,4 @@
 import JSZip from "jszip";
-import * as XLSX from "xlsx";
 import {
   getAttributeByLocalName,
   getDescendantsByLocalName,
@@ -10,6 +9,26 @@ import {
   resolveZipPath,
   toBlobUrl,
 } from "../xml/zipHelpers";
+
+function toExcelColumnName(zeroBasedColumnIndex: number): string {
+  let columnNumber = zeroBasedColumnIndex + 1;
+  let columnName = "";
+
+  while (columnNumber > 0) {
+    const remainder = (columnNumber - 1) % 26;
+    columnName = String.fromCharCode(65 + remainder) + columnName;
+    columnNumber = Math.floor((columnNumber - 1) / 26);
+  }
+
+  return columnName;
+}
+
+function toExcelCellAddress(
+  zeroBasedRowIndex: number,
+  zeroBasedColumnIndex: number
+): string {
+  return `${toExcelColumnName(zeroBasedColumnIndex)}${zeroBasedRowIndex + 1}`;
+}
 
 export async function extractRichValueImages(
   workbookData: ArrayBuffer
@@ -154,7 +173,7 @@ export function getCellRichImage(
 ): string {
   if (columnIndex == null || !richValueImages?.size || !vmMappings?.size) return "";
 
-  const cellAddress = XLSX.utils.encode_cell({ r: rowIndex, c: columnIndex });
+  const cellAddress = toExcelCellAddress(rowIndex, columnIndex);
   const vmValue = vmMappings.get(cellAddress);
   if (!vmValue) return "";
 
