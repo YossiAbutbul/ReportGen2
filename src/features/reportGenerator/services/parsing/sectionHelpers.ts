@@ -40,14 +40,13 @@ export function getHeaderIndexes(headerRow: unknown[]): HeaderIndexes | undefine
     ),
   };
 
-  const hasAnyRelevantHeader =
-    indexes.unitIdIndex !== undefined ||
-    indexes.unitTypeIndex !== undefined ||
-    indexes.frequencyIndex !== undefined ||
-    indexes.trpIndex !== undefined ||
-    indexes.maxPeakIndex !== undefined ||
-    indexes.graphIndex !== undefined ||
-    indexes.photoIndex !== undefined;
+  const hasCoreHeader =
+    indexes.unitIdIndex !== undefined &&
+    (
+      indexes.frequencyIndex !== undefined ||
+      indexes.trpIndex !== undefined ||
+      indexes.maxPeakIndex !== undefined
+    );
 
-  return hasAnyRelevantHeader ? indexes : undefined;
+  return hasCoreHeader ? indexes : undefined;
 }

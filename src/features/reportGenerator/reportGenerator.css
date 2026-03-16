@@ -206,6 +206,60 @@
   display: none;
 }
 
+.uploadActions {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+
+.uploadMenuButton {
+  min-width: 38px;
+  min-height: 38px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--arad-navy);
+  border: 1px solid var(--arad-line);
+  box-shadow: none;
+}
+
+.uploadMenu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  min-width: 190px;
+  padding: 8px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.98);
+  border: 1px solid var(--arad-line);
+  box-shadow: 0 14px 30px rgba(15, 52, 104, 0.14);
+  z-index: 20;
+}
+
+.uploadMenuItem {
+  width: 100%;
+  min-height: 40px;
+  padding: 0 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--arad-text);
+  box-shadow: none;
+}
+
+.uploadMenuItem:hover {
+  background: var(--arad-ice);
+  transform: none;
+  opacity: 1;
+}
+
 .uploadField {
   min-width: 0;
   width: 0;

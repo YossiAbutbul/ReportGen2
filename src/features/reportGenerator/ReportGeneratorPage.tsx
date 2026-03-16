@@ -1,4 +1,5 @@
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState, useEffect } from "react";
+import { EllipsisVertical, Download } from "lucide-react";
 
 import {
   TEMPLATE_SCOPE,
@@ -39,6 +40,8 @@ export default function ReportGeneratorPage() {
   const [error, setError] = useState("");
   const [isBuilding, setIsBuilding] = useState(false);
   const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
+  const [isUploadMenuOpen, setIsUploadMenuOpen] = useState(false);
+  const uploadMenuRef = useRef<HTMLDivElement | null>(null);
 
   const filteredRows = useMemo(() => {
     if (!parsed) return [];
@@ -162,6 +165,16 @@ export default function ReportGeneratorPage() {
     fileInputRef.current?.click();
   }
 
+  function downloadTemplate() {
+    const anchor = document.createElement("a");
+    anchor.href = "/report-generator-template.xlsx";
+    anchor.download = "report-generator-template.xlsx";
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    setIsUploadMenuOpen(false);
+  }
+
   function normalizePhotoSource(value?: string) {
     if (!value) return "";
 
@@ -184,14 +197,33 @@ export default function ReportGeneratorPage() {
   }
 
   function toggleUnitType(unitType: string) {
-    setSelectedUnitTypes((current) =>
-      current.includes(unitType)
-        ? current.length === 1
-          ? current
-          : current.filter((value) => value !== unitType)
-        : [...current, unitType]
-    );
-  }
+      setSelectedUnitTypes((current) =>
+        current.includes(unitType)
+          ? current.length === 1
+            ? current
+            : current.filter((value) => value !== unitType)
+          : [...current, unitType]
+      );
+    }
+
+    useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (
+        uploadMenuRef.current &&
+        !uploadMenuRef.current.contains(event.target as Node)
+      ) {
+        setIsUploadMenuOpen(false);
+      }
+    }
+
+    if (isUploadMenuOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isUploadMenuOpen]);
 
   return (
     <div className="page">
@@ -236,13 +268,40 @@ export default function ReportGeneratorPage() {
                   <div className="uploadField">
                     {excelFileName || "Select .xlsx or .xls workbook"}
                   </div>
-                  <button
-                    type="button"
-                    className="uploadButton"
-                    onClick={openFilePicker}
-                  >
-                    Choose file
-                  </button>
+                  <div className="uploadActions" ref={uploadMenuRef}>
+                    <button
+                      type="button"
+                      className="uploadButton"
+                      onClick={openFilePicker}
+                    >
+                      Choose file
+                    </button>
+
+                    <button
+                      type="button"
+                      className="uploadMenuButton"
+                      aria-label="Open upload actions"
+                      aria-haspopup="menu"
+                      aria-expanded={isUploadMenuOpen}
+                      onClick={() => setIsUploadMenuOpen((current) => !current)}
+                    >
+                      <EllipsisVertical size={16} />
+                    </button>
+
+                    {isUploadMenuOpen && (
+                      <div className="uploadMenu" role="menu">
+                        <button
+                          type="button"
+                          className="uploadMenuItem"
+                          role="menuitem"
+                          onClick={downloadTemplate}
+                        >
+                          <Download size={16} />
+                          <span>Download template</span>
+                        </button>
+                      </div>
+                    )}
+                  </div>
                   <input
                     ref={fileInputRef}
                     className="uploadInput"
