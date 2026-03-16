@@ -436,17 +436,17 @@ export default function ReportGeneratorPage() {
                   </thead>
                 </table>
                 <div className="tableBody">
-                  <table className="resultsTable">
-                    <colgroup>
-                      <col className="colUnitId" />
-                      <col className="colFrequency" />
-                      <col className="colTrp" />
-                      <col className="colPeak" />
-                      <col className="colPhoto" />
-                    </colgroup>
-                    <tbody>
-                      {filteredRows.length ? (
-                        filteredRows.map((row, index) => (
+                  {filteredRows.length ? (
+                    <table className="resultsTable">
+                      <colgroup>
+                        <col className="colUnitId" />
+                        <col className="colFrequency" />
+                        <col className="colTrp" />
+                        <col className="colPeak" />
+                        <col className="colPhoto" />
+                      </colgroup>
+                      <tbody>
+                        {filteredRows.map((row, index) => (
                           <tr key={`${row.unitId}-${row.frequencyMHz ?? "na"}-${index}`}>
                             <td>{row.unitId}</td>
                             <td>{formatFrequency(row.frequencyMHz)}</td>
@@ -481,16 +481,12 @@ export default function ReportGeneratorPage() {
                               )}
                             </td>
                           </tr>
-                        ))
-                      ) : (
-                        <tr>
-                          <td colSpan={5} className="emptyCell">
-                            No data loaded yet.
-                          </td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
+                        ))}
+                      </tbody>
+                    </table>
+                  ) : (
+                    <div className="emptyStateTable">No data loaded yet.</div>
+                  )}
                 </div>
               </div>
             </div>
