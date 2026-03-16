@@ -407,80 +407,133 @@ function getEmbeddedPhotoForRow(
   return "";
 }
 
-function extractRowsFromMatrix(
-  sheet: XLSX.WorkSheet,
-  matrix: SheetMatrix,
-  embeddedPhotos?: Map<string, string>,
-  richValueImages?: Map<string, string>,
-  vmMappings?: Map<string, string>
-): ResultRow[] {
-  if (!matrix.length) return [];
+function isBlankRow(row: MatrixCell[] | undefined): boolean {
+  if (!row?.length) return true;
 
-  const headerRow = matrix[0] ?? [];
-  const validIndexes = headerRow
+  return row.every((cell) => !cleanText(cell));
+}
+
+type HeaderIndexes = {
+  unitIdIndex?: number;
+  frequencyIndex?: number;
+  trpIndex?: number;
+  maxPeakIndex?: number;
+  graphIndex?: number;
+  photoIndex?: number;
+};
+
+function getHeaderIndexes(row: MatrixCell[]): HeaderIndexes | null {
+  const validIndexes = row
     .map((cell, index) => ({ cell, index }))
     .filter(({ cell }) => isMeaningfulHeader(cell))
     .map(({ index }) => index);
 
-  if (!validIndexes.length) return [];
+  if (!validIndexes.length) return null;
 
-  const normalizedHeaders = validIndexes.map((index) =>
-    normalizeHeader(headerRow[index])
-  );
-
+  const normalizedHeaders = validIndexes.map((index) => normalizeHeader(row[index]));
   const findIndexByHeader = (matcher: (header: string) => boolean) => {
     const found = normalizedHeaders.findIndex(matcher);
     return found >= 0 ? validIndexes[found] : undefined;
   };
 
-  const unitIdIndex = findIndexByHeader(
-    (header) =>
-      header.includes("unit id") ||
-      header === "unit" ||
-      header.includes("serial")
-  );
-  const frequencyIndex = findIndexByHeader((header) =>
-    header.includes("frequency")
-  );
-  const trpIndex = findIndexByHeader(
-    (header) =>
-      header === "trp" ||
-      header.startsWith("trp ") ||
-      header.includes(" trp")
-  );
-  const maxPeakIndex = findIndexByHeader(
-    (header) => header.includes("max peak") || header.includes("peak")
-  );
-  const graphIndex = findIndexByHeader(
-    (header) => header.includes("3d graph") || header.includes("graph")
-  );
-  const photoIndex = findIndexByHeader(
-    (header) =>
-      header === "3d photo" ||
-      header.startsWith("3d photo ") ||
-      header.includes(" 3d photo")
-  );
-  const imagePreviewIndex = photoIndex ?? graphIndex;
+  const headerIndexes: HeaderIndexes = {
+    unitIdIndex: findIndexByHeader(
+      (header) =>
+        header.includes("unit id") ||
+        header === "unit" ||
+        header.includes("serial")
+    ),
+    frequencyIndex: findIndexByHeader((header) => header.includes("frequency")),
+    trpIndex: findIndexByHeader(
+      (header) =>
+        header === "trp" ||
+        header.startsWith("trp ") ||
+        header.includes(" trp")
+    ),
+    maxPeakIndex: findIndexByHeader(
+      (header) => header.includes("max peak") || header.includes("peak")
+    ),
+    graphIndex: findIndexByHeader(
+      (header) => header.includes("3d graph") || header.includes("graph")
+    ),
+    photoIndex: findIndexByHeader(
+      (header) =>
+        header === "3d photo" ||
+        header.startsWith("3d photo ") ||
+        header.includes(" 3d photo")
+    ),
+  };
 
+  if (headerIndexes.unitIdIndex == null || headerIndexes.frequencyIndex == null) {
+    return null;
+  }
+
+  return headerIndexes;
+}
+
+function getSectionUnitType(
+  matrix: SheetMatrix,
+  sectionStartIndex: number,
+  headerRowIndex: number,
+  fallbackValue: string
+): string {
+  for (let rowIndex = headerRowIndex - 1; rowIndex >= sectionStartIndex; rowIndex -= 1) {
+    const row = matrix[rowIndex] ?? [];
+    const values = row.map((cell) => cleanText(cell)).filter(Boolean);
+
+    if (!values.length) continue;
+
+    return values[0] || fallbackValue;
+  }
+
+  return fallbackValue;
+}
+
+function extractSectionRows(
+  sheet: XLSX.WorkSheet,
+  matrix: SheetMatrix,
+  headerRowIndex: number,
+  endRowIndexExclusive: number,
+  headerIndexes: HeaderIndexes,
+  unitType: string,
+  embeddedPhotos?: Map<string, string>,
+  richValueImages?: Map<string, string>,
+  vmMappings?: Map<string, string>
+): ResultRow[] {
+  const imagePreviewIndex = headerIndexes.photoIndex ?? headerIndexes.graphIndex;
   const parsedRows: ResultRow[] = [];
   let currentUnitId = "";
 
-  for (let rowIndex = 1; rowIndex < matrix.length; rowIndex += 1) {
+  for (let rowIndex = headerRowIndex + 1; rowIndex < endRowIndexExclusive; rowIndex += 1) {
     const row = matrix[rowIndex] ?? [];
 
-    const unitIdCell = getCellTextOrLink(sheet, rowIndex, unitIdIndex);
+    if (getHeaderIndexes(row)) {
+      currentUnitId = "";
+      continue;
+    }
+
+    const unitIdCell = getCellTextOrLink(sheet, rowIndex, headerIndexes.unitIdIndex);
     const frequencyValue = toNumber(
-      frequencyIndex != null ? row[frequencyIndex] : undefined
+      headerIndexes.frequencyIndex != null
+        ? row[headerIndexes.frequencyIndex]
+        : undefined
     );
-    const trpValue = toNumber(trpIndex != null ? row[trpIndex] : undefined);
+    const trpValue = toNumber(
+      headerIndexes.trpIndex != null ? row[headerIndexes.trpIndex] : undefined
+    );
     const maxPeakValue = toNumber(
-      maxPeakIndex != null ? row[maxPeakIndex] : undefined
+      headerIndexes.maxPeakIndex != null ? row[headerIndexes.maxPeakIndex] : undefined
     );
-    const graphValue = getCellTextOrLink(sheet, rowIndex, graphIndex);
+    const graphValue = getCellTextOrLink(sheet, rowIndex, headerIndexes.graphIndex);
     const photoValue =
       getCellRichImage(rowIndex, imagePreviewIndex, richValueImages, vmMappings) ||
       getCellTextOrLink(sheet, rowIndex, imagePreviewIndex) ||
       getEmbeddedPhotoForRow(embeddedPhotos, rowIndex, imagePreviewIndex);
+
+    if (normalizeHeader(unitIdCell) === "unit id") {
+      currentUnitId = "";
+      continue;
+    }
 
     if (unitIdCell) currentUnitId = unitIdCell;
 
@@ -505,12 +558,84 @@ function extractRowsFromMatrix(
 
     parsedRows.push({
       unitId: currentUnitId,
+      unitType,
       frequencyMHz: frequencyValue,
       trp: trpValue,
       maxPeak: maxPeakValue,
       graphValue,
       photoValue,
     });
+  }
+
+  return parsedRows;
+}
+
+function extractRowsFromMatrix(
+  sheet: XLSX.WorkSheet,
+  sheetName: string,
+  matrix: SheetMatrix,
+  embeddedPhotos?: Map<string, string>,
+  richValueImages?: Map<string, string>,
+  vmMappings?: Map<string, string>
+): ResultRow[] {
+  if (!matrix.length) return [];
+
+  const parsedRows: ResultRow[] = [];
+  let rowIndex = 0;
+
+  while (rowIndex < matrix.length) {
+    while (rowIndex < matrix.length && isBlankRow(matrix[rowIndex])) {
+      rowIndex += 1;
+    }
+
+    if (rowIndex >= matrix.length) break;
+
+    const sectionStartIndex = rowIndex;
+    let sectionEndIndexExclusive = rowIndex;
+
+    while (
+      sectionEndIndexExclusive < matrix.length &&
+      !isBlankRow(matrix[sectionEndIndexExclusive])
+    ) {
+      sectionEndIndexExclusive += 1;
+    }
+
+    let headerRowIndex = -1;
+    let headerIndexes: HeaderIndexes | null = null;
+
+    for (let index = sectionStartIndex; index < sectionEndIndexExclusive; index += 1) {
+      const nextHeaderIndexes = getHeaderIndexes(matrix[index] ?? []);
+      if (nextHeaderIndexes) {
+        headerRowIndex = index;
+        headerIndexes = nextHeaderIndexes;
+        break;
+      }
+    }
+
+    if (headerRowIndex >= 0 && headerIndexes) {
+      const unitType = getSectionUnitType(
+        matrix,
+        sectionStartIndex,
+        headerRowIndex,
+        sheetName
+      );
+
+      parsedRows.push(
+        ...extractSectionRows(
+          sheet,
+          matrix,
+          headerRowIndex,
+          sectionEndIndexExclusive,
+          headerIndexes,
+          unitType,
+          embeddedPhotos,
+          richValueImages,
+          vmMappings
+        )
+      );
+    }
+
+    rowIndex = sectionEndIndexExclusive + 1;
   }
 
   return parsedRows;
@@ -529,7 +654,11 @@ function summarizeRows(rows: ResultRow[]): SummaryData {
     )
   ).sort((a, b) => a - b);
 
-  return { rows, uniqueUnitIds, uniqueFrequencies };
+  const uniqueUnitTypes = Array.from(
+    new Set(rows.map((row) => row.unitType).filter(Boolean))
+  );
+
+  return { rows, uniqueUnitIds, uniqueFrequencies, uniqueUnitTypes };
 }
 
 export function parseWorkbook(file: File): Promise<SummaryData> {
@@ -559,13 +688,14 @@ export function parseWorkbook(file: File): Promise<SummaryData> {
           const matrix = XLSX.utils.sheet_to_json<MatrixCell[]>(sheet, {
             header: 1,
             raw: true,
-            blankrows: false,
+            blankrows: true,
             defval: null,
           }) as SheetMatrix;
 
           allRows.push(
             ...extractRowsFromMatrix(
               sheet,
+              sheetName,
               matrix,
               embeddedPhotos.get(sheetName),
               richValueImages,

@@ -1,5 +1,6 @@
 export type ResultRow = {
   unitId: string;
+  unitType: string;
   frequencyMHz?: number;
   trp?: number;
   maxPeak?: number;
@@ -11,6 +12,7 @@ export type SummaryData = {
   rows: ResultRow[];
   uniqueUnitIds: string[];
   uniqueFrequencies: number[];
+  uniqueUnitTypes: string[];
 };
 
 export type MatrixCell = string | number | null;

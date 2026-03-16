@@ -35,19 +35,44 @@ export default function ReportGeneratorPage() {
   const [hwVersion, setHwVersion] = useState("");
   const [testedPower, setTestedPower] = useState(TEMPLATE_TESTED_POWER);
   const [parsed, setParsed] = useState<SummaryData | null>(null);
+  const [selectedUnitTypes, setSelectedUnitTypes] = useState<string[]>([]);
   const [error, setError] = useState("");
   const [isBuilding, setIsBuilding] = useState(false);
   const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
+
+  const filteredRows = useMemo(() => {
+    if (!parsed) return [];
+    if (!selectedUnitTypes.length) return parsed.rows;
+
+    return parsed.rows.filter((row) => selectedUnitTypes.includes(row.unitType));
+  }, [parsed, selectedUnitTypes]);
+
+  const filteredUnitIds = useMemo(
+    () => Array.from(new Set(filteredRows.map((row) => row.unitId).filter(Boolean))),
+    [filteredRows]
+  );
+
+  const filteredFrequencies = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          filteredRows
+            .map((row) => row.frequencyMHz)
+            .filter((value): value is number => value != null)
+        )
+      ).sort((a, b) => a - b),
+    [filteredRows]
+  );
 
   const totals = useMemo(() => {
     if (!parsed) return { rows: 0, units: 0, frequencies: 0 };
 
     return {
-      rows: parsed.rows.length,
-      units: parsed.uniqueUnitIds.length,
-      frequencies: parsed.uniqueFrequencies.length,
+      rows: filteredRows.length,
+      units: filteredUnitIds.length,
+      frequencies: filteredFrequencies.length,
     };
-  }, [parsed]);
+  }, [filteredFrequencies.length, filteredRows.length, filteredUnitIds.length, parsed]);
 
   async function handleUpload(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
@@ -66,9 +91,11 @@ export default function ReportGeneratorPage() {
         );
       }
 
+      setSelectedUnitTypes(result.uniqueUnitTypes);
       setParsed(result);
     } catch (err) {
       setParsed(null);
+      setSelectedUnitTypes([]);
       setError(err instanceof Error ? err.message : "Failed to parse the file.");
     }
   }
@@ -119,6 +146,7 @@ export default function ReportGeneratorPage() {
   function clearAll() {
     setExcelFileName("");
     setParsed(null);
+    setSelectedUnitTypes([]);
     setError("");
     setReportDate(todayAsDDMMYYYY());
     setFwVersion("");
@@ -153,6 +181,16 @@ export default function ReportGeneratorPage() {
 
   function hasPhoto(value?: string) {
     return Boolean(value?.trim());
+  }
+
+  function toggleUnitType(unitType: string) {
+    setSelectedUnitTypes((current) =>
+      current.includes(unitType)
+        ? current.length === 1
+          ? current
+          : current.filter((value) => value !== unitType)
+        : [...current, unitType]
+    );
   }
 
   return (
@@ -317,9 +355,9 @@ export default function ReportGeneratorPage() {
                   <h3>Detected Frequencies</h3>
                 </div>
                 <div className="listArea">
-                  {parsed?.uniqueFrequencies.length ? (
+                  {filteredFrequencies.length ? (
                     <div className="badgeGrid">
-                      {parsed.uniqueFrequencies.map((value) => (
+                      {filteredFrequencies.map((value) => (
                         <span
                           key={value}
                           className="dataBadge dataBadgeAccent"
@@ -339,9 +377,9 @@ export default function ReportGeneratorPage() {
                   <h3>Unit IDs</h3>
                 </div>
                 <div className="listArea listAreaScroll unitIdsListArea">
-                  {parsed?.uniqueUnitIds.length ? (
+                  {filteredUnitIds.length ? (
                     <div className="badgeGrid badgeGridAuto">
-                      {parsed.uniqueUnitIds.map((id) => (
+                      {filteredUnitIds.map((id) => (
                         <span key={id} className="dataBadge">
                           {id}
                         </span>
@@ -360,6 +398,24 @@ export default function ReportGeneratorPage() {
                   <h3>Preview of radiated results</h3>
                 </div>
               </div>
+              {parsed?.uniqueUnitTypes.length ? (
+                <div className="unitTypeFilterRow">
+                  {parsed.uniqueUnitTypes.map((unitType) => {
+                    const isSelected = selectedUnitTypes.includes(unitType);
+
+                    return (
+                      <button
+                        key={unitType}
+                        type="button"
+                        className={`unitTypeChip${isSelected ? " isActive" : ""}`}
+                        onClick={() => toggleUnitType(unitType)}
+                      >
+                        {unitType}
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : null}
               <div className="tableWrap">
                 <table className="resultsTable resultsTableHead">
                   <colgroup>
@@ -389,8 +445,8 @@ export default function ReportGeneratorPage() {
                       <col className="colPhoto" />
                     </colgroup>
                     <tbody>
-                      {parsed?.rows.length ? (
-                        parsed.rows.map((row, index) => (
+                      {filteredRows.length ? (
+                        filteredRows.map((row, index) => (
                           <tr key={`${row.unitId}-${row.frequencyMHz ?? "na"}-${index}`}>
                             <td>{row.unitId}</td>
                             <td>{formatFrequency(row.frequencyMHz)}</td>

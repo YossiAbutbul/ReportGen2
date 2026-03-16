@@ -460,12 +460,37 @@ button.secondary {
 .tableSection {
   min-height: 0;
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr);
+  grid-template-rows: auto auto minmax(0, 1fr);
 }
 
 .tableHint {
   margin: 6px 0 0;
   font-size: 13px;
+}
+
+.unitTypeFilterRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 10px;
+}
+
+.unitTypeChip {
+  min-height: 32px;
+  padding: 0 14px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.82);
+  color: #3d434c;
+  border: 1px solid rgba(39, 43, 49, 0.1);
+  box-shadow: none;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.unitTypeChip.isActive {
+  background: rgba(255, 215, 93, 0.34);
+  border-color: rgba(255, 216, 98, 0.32);
+  color: #35280d;
 }
 
 .tableWrap {
