@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 
 import {
   TEMPLATE_SCOPE,
@@ -25,6 +25,7 @@ function downloadBlob(blob: Blob, filename: string) {
 }
 
 export default function ReportGeneratorPage() {
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [excelFileName, setExcelFileName] = useState("");
   const [author, setAuthor] = useState("Yossi Abutbul");
   const [reportTitle, setReportTitle] = useState(TEMPLATE_TITLE);
@@ -36,6 +37,7 @@ export default function ReportGeneratorPage() {
   const [parsed, setParsed] = useState<SummaryData | null>(null);
   const [error, setError] = useState("");
   const [isBuilding, setIsBuilding] = useState(false);
+  const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
 
   const totals = useMemo(() => {
     if (!parsed) return { rows: 0, units: 0, frequencies: 0 };
@@ -124,109 +126,44 @@ export default function ReportGeneratorPage() {
     setScopeOfTesting(TEMPLATE_SCOPE);
   }
 
+  function openFilePicker() {
+    fileInputRef.current?.click();
+  }
+
+  function normalizePhotoSource(value?: string) {
+    if (!value) return "";
+
+    const trimmed = value.trim();
+    if (!trimmed) return "";
+
+    if (/^[a-z]:\\/i.test(trimmed)) {
+      return `file:///${trimmed.replace(/\\/g, "/")}`;
+    }
+
+    if (/^\\\\/.test(trimmed)) {
+      return `file:${trimmed.replace(/\\/g, "/")}`;
+    }
+
+    return trimmed;
+  }
+
+  function hasPhoto(value?: string) {
+    return Boolean(value?.trim());
+  }
+
   return (
     <div className="page">
-      <div className="layout">
-        <div className="panel">
-          <h1>Test Report Generator</h1>
-          <p className="muted">
-            Upload the Excel, insert FW and HW versions, and export a Word summary.
-          </p>
-
-          <div className="section">
-            <label className="uploadBox">
-              <div className="uploadTitle">Upload Test Result Excel file</div>
-              {/* <div className="uploadSub">
-                Unnamed columns are ignored, and the Cell Factor table is skipped.
-              </div> */}
-              <input type="file" accept=".xlsx,.xls" onChange={handleUpload} />
-            </label>
-
-            {excelFileName && (
-              <div className="fileBadge">
-                <strong>Loaded:</strong> {excelFileName}
-              </div>
-            )}
+      <div className="shell">
+        <section className="heroCard">
+          <div className="heroCopy">
+            <h1>Test Report Generator</h1>
+            <p className="heroText">
+              Upload the Excel results, complete the report details, and export a
+              polished Word report without touching the raw data manually.
+            </p>
           </div>
 
-          <div className="formGrid">
-            <div>
-              <label>Report title</label>
-              <input
-                value={reportTitle}
-                onChange={(event) => setReportTitle(event.target.value)}
-              />
-            </div>
-
-            <div>
-              <label>Author</label>
-              <input
-                value={author}
-                onChange={(event) => setAuthor(event.target.value)}
-              />
-            </div>
-
-            <div>
-              <label>Date</label>
-              <input
-                value={reportDate}
-                onChange={(event) => setReportDate(event.target.value)}
-              />
-            </div>
-
-            <div>
-              <label>Tested power</label>
-              <input
-                value={testedPower}
-                onChange={(event) => setTestedPower(event.target.value)}
-              />
-            </div>
-
-            <div>
-              <label>F.W. Version</label>
-              <input
-                placeholder="e.g. 2E.51"
-                value={fwVersion}
-                onChange={(event) => setFwVersion(event.target.value)}
-              />
-            </div>
-
-            <div>
-              <label>H.W. Version</label>
-              <input
-                placeholder="e.g. 08.06"
-                value={hwVersion}
-                onChange={(event) => setHwVersion(event.target.value)}
-              />
-            </div>
-          </div>
-
-          <div className="section">
-            <label>Scope of Testing</label>
-            <textarea
-              rows={4}
-              value={scopeOfTesting}
-              onChange={(event) => setScopeOfTesting(event.target.value)}
-              placeholder="Describe the test scope for the report"
-            />
-          </div>
-
-          <div className="actions">
-            <button onClick={handleGenerate} disabled={!parsed || isBuilding}>
-              {isBuilding ? "Generating..." : "Generate Word File"}
-            </button>
-            <button className="secondary" onClick={clearAll}>
-              Clear
-            </button>
-          </div>
-
-          {error && <div className="errorBox">{error}</div>}
-        </div>
-
-        <div className="panel">
-          <h2>Parsed Summary</h2>
-
-          <div className="stats">
+          <div className="heroStats">
             <div className="statCard">
               <div className="muted">Units</div>
               <div className="statValue">{totals.units}</div>
@@ -235,73 +172,296 @@ export default function ReportGeneratorPage() {
               <div className="muted">Frequencies</div>
               <div className="statValue">{totals.frequencies}</div>
             </div>
-            <div className="statCard">
+            <div className="statCard accent">
               <div className="muted">Result Rows</div>
               <div className="statValue">{totals.rows}</div>
             </div>
           </div>
+        </section>
 
-          <div className="section">
-            <h3>Unit IDs</h3>
-            <div className="box">
-              {parsed?.uniqueUnitIds.length ? (
-                <ul>
-                  {parsed.uniqueUnitIds.map((id) => (
-                    <li key={id}>{id}</li>
-                  ))}
-                </ul>
-              ) : (
-                <div className="muted">Upload a file to see unit IDs.</div>
-              )}
+        <div className="layout">
+          <div className="panel setupPanel">
+            <div className="setupPanelBody">
+              <div className="panelHeader">
+                <div>
+                  <p className="panelEyebrow">Setup</p>
+                  <h2>Report Details</h2>
+                </div>
+              </div>
+
+              <div className="section">
+                <div className="uploadRow">
+                  <div className="uploadField">
+                    {excelFileName || "Select .xlsx or .xls workbook"}
+                  </div>
+                  <button
+                    type="button"
+                    className="uploadButton"
+                    onClick={openFilePicker}
+                  >
+                    Choose file
+                  </button>
+                  <input
+                    ref={fileInputRef}
+                    className="uploadInput"
+                    type="file"
+                    accept=".xlsx,.xls"
+                    onChange={handleUpload}
+                  />
+                </div>
+              </div>
+
+              <div className="formGrid">
+                <div>
+                  <label htmlFor="report-title">Report title</label>
+                  <input
+                    id="report-title"
+                    value={reportTitle}
+                    onChange={(event) => setReportTitle(event.target.value)}
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="report-author">Author</label>
+                  <input
+                    id="report-author"
+                    value={author}
+                    onChange={(event) => setAuthor(event.target.value)}
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="report-date">Date</label>
+                  <input
+                    id="report-date"
+                    value={reportDate}
+                    onChange={(event) => setReportDate(event.target.value)}
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="tested-power">Tested power</label>
+                  <input
+                    id="tested-power"
+                    value={testedPower}
+                    onChange={(event) => setTestedPower(event.target.value)}
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="fw-version">F.W. Version</label>
+                  <input
+                    id="fw-version"
+                    placeholder="e.g. 2E.51"
+                    value={fwVersion}
+                    onChange={(event) => setFwVersion(event.target.value)}
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="hw-version">H.W. Version</label>
+                  <input
+                    id="hw-version"
+                    placeholder="e.g. 08.06"
+                    value={hwVersion}
+                    onChange={(event) => setHwVersion(event.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div className="section scopeSection">
+                <label htmlFor="scope-of-testing">Scope of Testing</label>
+                <textarea
+                  id="scope-of-testing"
+                  className="scopeTextarea"
+                  rows={4}
+                  value={scopeOfTesting}
+                  onChange={(event) => setScopeOfTesting(event.target.value)}
+                  placeholder="Describe the test scope for the report"
+                />
+              </div>
+
+              {error && <div className="errorBox">{error}</div>}
+            </div>
+
+            <div className="actions stickyActions">
+              <button type="button" onClick={handleGenerate} disabled={!parsed || isBuilding}>
+                {isBuilding ? "Generating..." : "Generate Report"}
+              </button>
+              <button type="button" className="secondary" onClick={clearAll}>
+                Clear
+              </button>
             </div>
           </div>
 
-          <div className="section">
-            <h3>Detected Frequencies</h3>
-            <div className="box">
-              {parsed?.uniqueFrequencies.length
-                ? parsed.uniqueFrequencies
-                    .map((value) => formatFrequency(value))
-                    .join(", ")
-                : "Upload a file to detect frequencies."}
+          <div className="panel overviewPanel">
+            <div className="panelHeader">
+              <div>
+                <p className="panelEyebrow">Overview</p>
+                <h2>Parsed Summary</h2>
+              </div>
             </div>
-          </div>
 
-          <div className="section">
-            <h3>Preview of radiated results</h3>
-            <div className="tableWrap">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Unit ID</th>
-                    <th>Frequency</th>
-                    <th>TRP</th>
-                    <th>Max Peak</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {parsed?.rows.length ? (
-                    parsed.rows.map((row, index) => (
-                      <tr key={`${row.unitId}-${row.frequencyMHz ?? "na"}-${index}`}>
-                        <td>{row.unitId}</td>
-                        <td>{formatFrequency(row.frequencyMHz)}</td>
-                        <td>{formatNumber(row.trp)}</td>
-                        <td>{formatNumber(row.maxPeak)}</td>
-                      </tr>
-                    ))
+            <div className="infoGrid">
+              <div className="summaryCard compactSection">
+                <div className="summaryCardHeader">
+                  <h3>Detected Frequencies</h3>
+                </div>
+                <div className="listArea">
+                  {parsed?.uniqueFrequencies.length ? (
+                    <div className="badgeGrid">
+                      {parsed.uniqueFrequencies.map((value) => (
+                        <span
+                          key={value}
+                          className="dataBadge dataBadgeAccent"
+                        >
+                          {formatFrequency(value)}
+                        </span>
+                      ))}
+                    </div>
                   ) : (
-                    <tr>
-                      <td colSpan={4} className="emptyCell">
-                        No data loaded yet.
-                      </td>
-                    </tr>
+                    <div className="muted">Upload a file to detect frequencies.</div>
                   )}
-                </tbody>
-              </table>
+                </div>
+              </div>
+
+              <div className="summaryCard compactSection">
+                <div className="summaryCardHeader">
+                  <h3>Unit IDs</h3>
+                </div>
+                <div className="listArea listAreaScroll">
+                  {parsed?.uniqueUnitIds.length ? (
+                    <div className="badgeGrid badgeGridAuto">
+                      {parsed.uniqueUnitIds.map((id) => (
+                        <span key={id} className="dataBadge">
+                          {id}
+                        </span>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="muted">Upload a file to see unit IDs.</div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="section tableSection">
+              <div className="tableHeader">
+                <div>
+                  <h3>Preview of radiated results</h3>
+                </div>
+              </div>
+              <div className="tableWrap">
+                <table className="resultsTable resultsTableHead">
+                  <colgroup>
+                    <col className="colUnitId" />
+                    <col className="colFrequency" />
+                    <col className="colTrp" />
+                    <col className="colPeak" />
+                    <col className="colPhoto" />
+                  </colgroup>
+                  <thead>
+                    <tr>
+                      <th>Unit ID</th>
+                      <th>Frequency</th>
+                      <th>TRP</th>
+                      <th>Max Peak</th>
+                      <th>Photo</th>
+                    </tr>
+                  </thead>
+                </table>
+                <div className="tableBody">
+                  <table className="resultsTable">
+                    <colgroup>
+                      <col className="colUnitId" />
+                      <col className="colFrequency" />
+                      <col className="colTrp" />
+                      <col className="colPeak" />
+                      <col className="colPhoto" />
+                    </colgroup>
+                    <tbody>
+                      {parsed?.rows.length ? (
+                        parsed.rows.map((row, index) => (
+                          <tr key={`${row.unitId}-${row.frequencyMHz ?? "na"}-${index}`}>
+                            <td>{row.unitId}</td>
+                            <td>{formatFrequency(row.frequencyMHz)}</td>
+                            <td>{formatNumber(row.trp)}</td>
+                            <td>{formatNumber(row.maxPeak)}</td>
+                            <td className="photoCell">
+                              {hasPhoto(row.photoValue) ? (
+                                <button
+                                  type="button"
+                                  className="photoIconButton"
+                                  onClick={() =>
+                                    setSelectedPhoto(
+                                      normalizePhotoSource(row.photoValue) || null
+                                    )
+                                  }
+                                  aria-label={`View 3D photo for ${row.unitId}`}
+                                  title="View 3D photo"
+                                >
+                                  <svg
+                                    viewBox="0 0 24 24"
+                                    aria-hidden="true"
+                                    className="photoIcon"
+                                  >
+                                    <path
+                                      d="M8 7.5 9.7 5h4.6L16 7.5H19a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2zm4 9a4 4 0 1 0 0-8 4 4 0 0 0 0 8m0-1.8a2.2 2.2 0 1 1 0-4.4 2.2 2.2 0 0 1 0 4.4"
+                                      fill="currentColor"
+                                    />
+                                  </svg>
+                                </button>
+                              ) : (
+                                <span className="photoPlaceholder">-</span>
+                              )}
+                            </td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan={5} className="emptyCell">
+                            No data loaded yet.
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
             </div>
           </div>
         </div>
       </div>
+
+      {selectedPhoto && (
+        <div
+          className="photoModalBackdrop"
+          onClick={() => setSelectedPhoto(null)}
+          role="presentation"
+        >
+          <div
+            className="photoModal"
+            onClick={(event) => event.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-label="3D photo preview"
+          >
+            <button
+              type="button"
+              className="photoModalClose"
+              onClick={() => setSelectedPhoto(null)}
+              aria-label="Close photo preview"
+            >
+              Close
+            </button>
+            <img
+              className="photoModalImage"
+              src={selectedPhoto}
+              alt="3D preview"
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

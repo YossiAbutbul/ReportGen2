@@ -4,6 +4,7 @@ export type ResultRow = {
   trp?: number;
   maxPeak?: number;
   graphValue?: string;
+  photoValue?: string;
 };
 
 export type SummaryData = {

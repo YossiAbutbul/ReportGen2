@@ -19,7 +19,28 @@ function normalizeHeader(value: unknown): string {
     .replace(/\s+/g, " ");
 }
 
-function extractRowsFromMatrix(matrix: SheetMatrix): ResultRow[] {
+function getCellTextOrLink(
+  sheet: XLSX.WorkSheet,
+  rowIndex: number,
+  columnIndex?: number
+): string {
+  if (columnIndex == null) return "";
+
+  const cellAddress = XLSX.utils.encode_cell({ r: rowIndex, c: columnIndex });
+  const cell = sheet[cellAddress] as
+    | (XLSX.CellObject & { l?: { Target?: string } })
+    | undefined;
+
+  const textValue = cleanText(cell?.v);
+  if (textValue) return textValue;
+
+  return cleanText(cell?.l?.Target);
+}
+
+function extractRowsFromMatrix(
+  sheet: XLSX.WorkSheet,
+  matrix: SheetMatrix
+): ResultRow[] {
   if (!matrix.length) return [];
 
   const headerRow = matrix[0] ?? [];
@@ -60,6 +81,12 @@ function extractRowsFromMatrix(matrix: SheetMatrix): ResultRow[] {
   const graphIndex = findIndexByHeader(
     (header) => header.includes("3d graph") || header.includes("graph")
   );
+  const photoIndex = findIndexByHeader(
+    (header) =>
+      header === "3d photo" ||
+      header.startsWith("3d photo ") ||
+      header.includes(" 3d photo")
+  );
 
   const parsedRows: ResultRow[] = [];
   let currentUnitId = "";
@@ -67,7 +94,7 @@ function extractRowsFromMatrix(matrix: SheetMatrix): ResultRow[] {
   for (let rowIndex = 1; rowIndex < matrix.length; rowIndex += 1) {
     const row = matrix[rowIndex] ?? [];
 
-    const unitIdCell = cleanText(unitIdIndex != null ? row[unitIdIndex] : "");
+    const unitIdCell = getCellTextOrLink(sheet, rowIndex, unitIdIndex);
     const frequencyValue = toNumber(
       frequencyIndex != null ? row[frequencyIndex] : undefined
     );
@@ -75,7 +102,8 @@ function extractRowsFromMatrix(matrix: SheetMatrix): ResultRow[] {
     const maxPeakValue = toNumber(
       maxPeakIndex != null ? row[maxPeakIndex] : undefined
     );
-    const graphValue = cleanText(graphIndex != null ? row[graphIndex] : "");
+    const graphValue = getCellTextOrLink(sheet, rowIndex, graphIndex);
+    const photoValue = getCellTextOrLink(sheet, rowIndex, photoIndex);
 
     if (unitIdCell) currentUnitId = unitIdCell;
 
@@ -83,7 +111,8 @@ function extractRowsFromMatrix(matrix: SheetMatrix): ResultRow[] {
       frequencyValue != null ||
       trpValue != null ||
       maxPeakValue != null ||
-      Boolean(graphValue);
+      Boolean(graphValue) ||
+      Boolean(photoValue);
 
     if (!currentUnitId || !hasMeasurements) continue;
 
@@ -91,6 +120,7 @@ function extractRowsFromMatrix(matrix: SheetMatrix): ResultRow[] {
       trpValue == null &&
       maxPeakValue == null &&
       !graphValue &&
+      !photoValue &&
       frequencyValue != null &&
       !unitIdCell;
 
@@ -102,6 +132,7 @@ function extractRowsFromMatrix(matrix: SheetMatrix): ResultRow[] {
       trp: trpValue,
       maxPeak: maxPeakValue,
       graphValue,
+      photoValue,
     });
   }
 
@@ -145,7 +176,7 @@ export function parseWorkbook(file: File): Promise<SummaryData> {
             defval: null,
           }) as SheetMatrix;
 
-          allRows.push(...extractRowsFromMatrix(matrix));
+          allRows.push(...extractRowsFromMatrix(sheet, matrix));
         });
 
         resolve(summarizeRows(allRows));
