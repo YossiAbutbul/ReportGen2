@@ -127,6 +127,10 @@ export default function ReportGeneratorPage() {
   }
 
   function openFilePicker() {
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+
     fileInputRef.current?.click();
   }
 
@@ -285,11 +289,16 @@ export default function ReportGeneratorPage() {
             </div>
 
             <div className="actions stickyActions">
-              <button type="button" onClick={handleGenerate} disabled={!parsed || isBuilding}>
-                {isBuilding ? "Generating..." : "Generate Report"}
-              </button>
               <button type="button" className="secondary" onClick={clearAll}>
                 Clear
+              </button>
+              <button
+                type="button"
+                className="primaryAction"
+                onClick={handleGenerate}
+                disabled={!parsed || isBuilding}
+              >
+                {isBuilding ? "Generating..." : "Generate Report"}
               </button>
             </div>
           </div>
@@ -325,11 +334,11 @@ export default function ReportGeneratorPage() {
                 </div>
               </div>
 
-              <div className="summaryCard compactSection">
+              <div className="summaryCard compactSection unitIdsCard">
                 <div className="summaryCardHeader">
                   <h3>Unit IDs</h3>
                 </div>
-                <div className="listArea listAreaScroll">
+                <div className="listArea listAreaScroll unitIdsListArea">
                   {parsed?.uniqueUnitIds.length ? (
                     <div className="badgeGrid badgeGridAuto">
                       {parsed.uniqueUnitIds.map((id) => (

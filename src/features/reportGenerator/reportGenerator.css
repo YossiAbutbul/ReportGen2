@@ -263,7 +263,7 @@
   width: 100%;
   min-height: 38px;
   border: 1px solid rgba(52, 57, 63, 0.08);
-  border-radius: 14px;
+  border-radius: 8px;
   padding: 0 14px;
   background: rgba(255, 255, 255, 0.84);
   color: #5e646d;
@@ -274,8 +274,7 @@
 
 .formGrid input:focus,
 .panel textarea:focus {
-  outline: 2px solid rgba(255, 211, 85, 0.45);
-  border-color: rgba(255, 211, 85, 0.4);
+  outline: 0px;
 }
 
 .panel textarea {
@@ -299,6 +298,8 @@
 
 .actions {
   display: flex;
+  justify-content: flex-end;
+  align-items: center;
   gap: 12px;
   margin-top: 14px;
 }
@@ -339,6 +340,10 @@ button.secondary {
   color: #24272b;
 }
 
+.primaryAction {
+  min-width: 156px;
+}
+
 .errorBox {
   margin-top: 12px;
   padding: 12px 14px;
@@ -372,6 +377,14 @@ button.secondary {
   overflow-y: auto;
   overflow-x: hidden;
   padding-right: 4px;
+}
+
+.unitIdsCard {
+  padding-right: 0;
+}
+
+.unitIdsListArea {
+  padding-right: 0;
 }
 
 .listAreaScroll::-webkit-scrollbar {
@@ -460,6 +473,7 @@ button.secondary {
   height: 100%;
   min-height: 0;
   overflow: hidden;
+  border-radius: 8px 8px 8px 8px;
   border: 1px solid rgba(61, 66, 74, 0.1);
   background: rgba(255, 255, 255, 0.72);
 }
@@ -587,6 +601,8 @@ td {
 .photoModalImage {
   width: 100%;
   max-height: calc(100vh - 144px);
+  padding: 12px;
+  box-sizing: border-box;
   object-fit: contain;
   border-radius: 18px;
   background: #f3f4f6;
