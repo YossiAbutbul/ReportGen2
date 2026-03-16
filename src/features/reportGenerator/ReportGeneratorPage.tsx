@@ -1,6 +1,10 @@
 import { useMemo, useState } from "react";
 
-import { TEMPLATE_TESTED_POWER, TEMPLATE_TITLE } from "./constants";
+import {
+  TEMPLATE_SCOPE,
+  TEMPLATE_TESTED_POWER,
+  TEMPLATE_TITLE,
+} from "./constants";
 import { parseWorkbook } from "./services/excelParser";
 import { buildDocx } from "./services/wordReportBuilder";
 import type { SummaryData } from "./types";
@@ -25,6 +29,7 @@ export default function ReportGeneratorPage() {
   const [author, setAuthor] = useState("Yossi Abutbul");
   const [reportTitle, setReportTitle] = useState(TEMPLATE_TITLE);
   const [reportDate, setReportDate] = useState(todayAsDDMMYYYY());
+  const [scopeOfTesting, setScopeOfTesting] = useState(TEMPLATE_SCOPE);
   const [fwVersion, setFwVersion] = useState("");
   const [hwVersion, setHwVersion] = useState("");
   const [testedPower, setTestedPower] = useState(TEMPLATE_TESTED_POWER);
@@ -76,10 +81,16 @@ export default function ReportGeneratorPage() {
     setError("");
 
     try {
+      const dateForFileName = (reportDate.trim() || todayAsDDMMYYYY()).replace(
+        /[^0-9.\\-]+/g,
+        "_"
+      );
+
       const blob = await buildDocx({
         title: reportTitle.trim() || TEMPLATE_TITLE,
         author: author.trim() || "Author",
         dateText: reportDate.trim() || todayAsDDMMYYYY(),
+        scopeOfTesting: scopeOfTesting.trim() || TEMPLATE_SCOPE,
         fwVersion: fwVersion.trim(),
         hwVersion: hwVersion.trim(),
         testedPower: testedPower.trim() || "-",
@@ -93,7 +104,7 @@ export default function ReportGeneratorPage() {
         "_"
       );
 
-      downloadBlob(blob, `${safeName}.docx`);
+      downloadBlob(blob, `${safeName}-${dateForFileName}.docx`);
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "Failed to generate the Word file."
@@ -107,25 +118,27 @@ export default function ReportGeneratorPage() {
     setExcelFileName("");
     setParsed(null);
     setError("");
+    setReportDate(todayAsDDMMYYYY());
     setFwVersion("");
     setHwVersion("");
+    setScopeOfTesting(TEMPLATE_SCOPE);
   }
 
   return (
     <div className="page">
       <div className="layout">
         <div className="panel">
-          <h1>Word Test Summary Generator</h1>
+          <h1>Test Report Generator</h1>
           <p className="muted">
             Upload the Excel, insert FW and HW versions, and export a Word summary.
           </p>
 
           <div className="section">
             <label className="uploadBox">
-              <div className="uploadTitle">Upload Excel file</div>
-              <div className="uploadSub">
+              <div className="uploadTitle">Upload Test Result Excel file</div>
+              {/* <div className="uploadSub">
                 Unnamed columns are ignored, and the Cell Factor table is skipped.
-              </div>
+              </div> */}
               <input type="file" accept=".xlsx,.xls" onChange={handleUpload} />
             </label>
 
@@ -186,6 +199,16 @@ export default function ReportGeneratorPage() {
                 onChange={(event) => setHwVersion(event.target.value)}
               />
             </div>
+          </div>
+
+          <div className="section">
+            <label>Scope of Testing</label>
+            <textarea
+              rows={4}
+              value={scopeOfTesting}
+              onChange={(event) => setScopeOfTesting(event.target.value)}
+              placeholder="Describe the test scope for the report"
+            />
           </div>
 
           <div className="actions">

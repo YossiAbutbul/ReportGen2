@@ -19,6 +19,7 @@ export type ReportBuildParams = {
   title: string;
   author: string;
   dateText: string;
+  scopeOfTesting: string;
   fwVersion: string;
   hwVersion: string;
   testedPower: string;
