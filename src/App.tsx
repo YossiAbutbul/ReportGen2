@@ -1,5 +1,5 @@
-import WordTestSummaryGenerator from "./WordTestSummaryGenerator";
+import ReportGeneratorPage from "./features/reportGenerator/ReportGeneratorPage";
 
 export default function App() {
-  return <WordTestSummaryGenerator />;
+  return <ReportGeneratorPage />;
 }
