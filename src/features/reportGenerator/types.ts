@@ -15,7 +15,7 @@ export type SummaryData = {
   uniqueUnitTypes: string[];
 };
 
-export type MatrixCell = string | number | null;
+export type MatrixCell = string | number | boolean | null | undefined;
 export type SheetMatrix = MatrixCell[][];
 
 export type ReportBuildParams = {
