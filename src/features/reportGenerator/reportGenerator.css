@@ -80,7 +80,6 @@
 .statCard {
   padding: 16px;
   background: rgba(255, 255, 255, 0.56);
-  border: 1px solid rgba(255, 255, 255, 0.68);
 }
 
 .statCard.accent {
@@ -504,7 +503,7 @@ button.secondary {
 }
 
 .colUnitId {
-  width: 36%;
+  width: 30%;
 }
 
 .colFrequency {
@@ -517,7 +516,7 @@ button.secondary {
 }
 
 .colPhoto {
-  width: 8%;
+  width: 12%;
 }
 
 th,

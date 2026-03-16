@@ -9,13 +9,13 @@ import {
   Packer,
   PageNumber,
   Paragraph,
-  ShadingType,
   Table,
   TableCell,
   TableLayoutType,
   TableRow,
   TextRun,
   VerticalAlignTable,
+  VerticalMergeType,
   WidthType,
 } from "docx";
 
@@ -25,11 +25,12 @@ import type { ReportBuildParams } from "../types";
 import { formatFrequency, formatNumber } from "../utils/format";
 
 const brandBlue = "002060";
-const accentBlue = "D9E8F6";
-const borderColor = "9FB6CE";
-const lightBorderColor = "D7E1EC";
+const borderColor = "000000";
+const lightBorderColor = "000000";
 const testSetupWidthPx = 601;
 const testSetupHeightPx = 389;
+const reportPhotoHeightPx = 96;
+const reportPhotoMaxWidthPx = 132;
 
 async function loadAssetBuffer(assetUrl: string): Promise<ArrayBuffer> {
   const response = await fetch(assetUrl);
@@ -39,6 +40,57 @@ async function loadAssetBuffer(assetUrl: string): Promise<ArrayBuffer> {
   }
 
   return response.arrayBuffer();
+}
+
+async function loadImageWithSize(imageUrl: string): Promise<{
+  data: ArrayBuffer;
+  width: number;
+  height: number;
+  type: "png" | "jpg" | "gif" | "bmp";
+}> {
+  const response = await fetch(imageUrl);
+
+  if (!response.ok) {
+    throw new Error(`Failed to load report image: ${imageUrl}`);
+  }
+
+  const blob = await response.blob();
+  const data = await blob.arrayBuffer();
+  const objectUrl = URL.createObjectURL(blob);
+
+  try {
+    const image = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const nextImage = new Image();
+      nextImage.onload = () => resolve(nextImage);
+      nextImage.onerror = () =>
+        reject(new Error(`Failed to decode report image: ${imageUrl}`));
+      nextImage.src = objectUrl;
+    });
+
+    const extension = blob.type.split("/").pop()?.toLowerCase();
+    const normalizedType =
+      extension === "jpeg"
+        ? "jpg"
+        : extension;
+
+    if (
+      normalizedType !== "png" &&
+      normalizedType !== "jpg" &&
+      normalizedType !== "gif" &&
+      normalizedType !== "bmp"
+    ) {
+      throw new Error(`Unsupported report image type: ${blob.type || "unknown"}`);
+    }
+
+    return {
+      data,
+      width: image.naturalWidth,
+      height: image.naturalHeight,
+      type: normalizedType,
+    };
+  } finally {
+    URL.revokeObjectURL(objectUrl);
+  }
 }
 
 async function loadSvgImageOptions(assetUrl: string) {
@@ -157,16 +209,20 @@ function makeCell(
     widthPct?: number;
     align?: (typeof AlignmentType)[keyof typeof AlignmentType];
     verticalAlign?: (typeof VerticalAlignTable)[keyof typeof VerticalAlignTable];
+    bold?: boolean;
+    suppressTopBorder?: boolean;
+    suppressBottomBorder?: boolean;
+    rowSpan?: number;
+    verticalMerge?: (typeof VerticalMergeType)[keyof typeof VerticalMergeType];
   }
 ) {
   return new TableCell({
     width: options?.widthPct
       ? { size: options.widthPct, type: WidthType.PERCENTAGE }
       : undefined,
+    rowSpan: options?.rowSpan,
+    verticalMerge: options?.verticalMerge,
     verticalAlign: options?.verticalAlign ?? VerticalAlignTable.CENTER,
-    shading: options?.header
-      ? { fill: accentBlue, type: ShadingType.CLEAR, color: "auto" }
-      : undefined,
     margins: {
       top: 100,
       bottom: 100,
@@ -174,8 +230,14 @@ function makeCell(
       right: 120,
     },
     borders: {
-      top: { style: BorderStyle.SINGLE, size: 1, color: borderColor },
-      bottom: { style: BorderStyle.SINGLE, size: 1, color: borderColor },
+      top: options?.suppressTopBorder
+        ? { style: BorderStyle.NONE, size: 0, color: borderColor }
+        : { style: BorderStyle.SINGLE, size: 1, color: borderColor },
+      bottom: {
+        style: options?.suppressBottomBorder ? BorderStyle.NONE : BorderStyle.SINGLE,
+        size: options?.header ? 2 : 1,
+        color: borderColor,
+      },
       left: { style: BorderStyle.SINGLE, size: 1, color: borderColor },
       right: { style: BorderStyle.SINGLE, size: 1, color: borderColor },
     },
@@ -187,13 +249,76 @@ function makeCell(
           children: [
             new TextRun({
               text: line || " ",
-              bold: !!options?.header,
-              color: options?.header ? brandBlue : "000000",
+              bold: !!options?.header || !!options?.bold,
+              color: "000000",
               size: 21,
             }),
           ],
         })
     ),
+  });
+}
+
+function makeImageCell(
+  image:
+    | {
+        data: ArrayBuffer;
+        width: number;
+        height: number;
+        type: "png" | "jpg" | "gif" | "bmp";
+      }
+    | null,
+  fallbackText = "-"
+) {
+  return new TableCell({
+    verticalAlign: VerticalAlignTable.CENTER,
+    margins: {
+      top: 100,
+      bottom: 100,
+      left: 120,
+      right: 120,
+    },
+    borders: {
+      top: { style: BorderStyle.SINGLE, size: 1, color: borderColor },
+      bottom: { style: BorderStyle.SINGLE, size: 1, color: lightBorderColor },
+      left: { style: BorderStyle.SINGLE, size: 1, color: borderColor },
+      right: { style: BorderStyle.SINGLE, size: 1, color: borderColor },
+    },
+    children: image
+      ? [
+          new Paragraph({
+            alignment: AlignmentType.CENTER,
+            spacing: { after: 0 },
+            children: [
+              new ImageRun({
+                type: image.type,
+                data: image.data,
+                transformation: {
+                  width: Math.min(
+                    reportPhotoMaxWidthPx,
+                    Math.max(
+                      1,
+                      Math.round((image.width / image.height) * reportPhotoHeightPx)
+                    )
+                  ),
+                  height: reportPhotoHeightPx,
+                },
+              }),
+            ],
+          }),
+        ]
+      : [
+          new Paragraph({
+            alignment: AlignmentType.CENTER,
+            spacing: { after: 0 },
+            children: [
+              new TextRun({
+                text: fallbackText,
+                size: 21,
+              }),
+            ],
+          }),
+        ],
   });
 }
 
@@ -228,14 +353,26 @@ function makeLabelValueTable(rows: Array<[string, string]>) {
       ...rows.map(
         ([label, value]) =>
           new TableRow({
-            children: [makeCell(label), makeCell(value || "-")],
+            children: [makeCell(label, { bold: true }), makeCell(value || "-")],
           })
       ),
     ],
   });
 }
 
-function makeResultsTable(params: ReportBuildParams) {
+async function makeResultsTable(params: ReportBuildParams) {
+  const rowImages = await Promise.all(
+    params.rows.map(async (row) => {
+      if (!row.photoValue) return null;
+
+      try {
+        return await loadImageWithSize(row.photoValue);
+      } catch {
+        return null;
+      }
+    })
+  );
+
   return new Table({
     width: { size: 100, type: WidthType.PERCENTAGE },
     layout: TableLayoutType.FIXED,
@@ -261,36 +398,57 @@ function makeResultsTable(params: ReportBuildParams) {
         children: [
           makeCell("Unit ID", {
             header: true,
-            widthPct: 34,
+            widthPct: 28,
             align: AlignmentType.CENTER,
           }),
           makeCell("Frequency", {
             header: true,
-            widthPct: 18,
+            widthPct: 14,
             align: AlignmentType.CENTER,
           }),
           makeCell("TRP", {
             header: true,
-            widthPct: 16,
+            widthPct: 12,
             align: AlignmentType.CENTER,
           }),
           makeCell("Max Peak", {
             header: true,
-            widthPct: 16,
+            widthPct: 14,
             align: AlignmentType.CENTER,
           }),
           makeCell("3D Graph", {
             header: true,
-            widthPct: 16,
+            widthPct: 32,
             align: AlignmentType.CENTER,
           }),
         ],
       }),
       ...params.rows.map(
-        (row) =>
-          new TableRow({
+        (row, index) => {
+          const previousRow = params.rows[index - 1];
+          const startsUnitGroup = previousRow?.unitId !== row.unitId;
+          let groupSize = 1;
+
+          if (startsUnitGroup) {
+            for (let cursor = index + 1; cursor < params.rows.length; cursor += 1) {
+              if (params.rows[cursor]?.unitId !== row.unitId) break;
+              groupSize += 1;
+            }
+          }
+
+          return new TableRow({
             children: [
-              makeCell(row.unitId, { align: AlignmentType.CENTER }),
+              ...(startsUnitGroup
+                ? [
+                    makeCell(row.unitId, {
+                      align: AlignmentType.CENTER,
+                      verticalAlign: VerticalAlignTable.CENTER,
+                      bold: true,
+                      rowSpan: groupSize,
+                      verticalMerge: VerticalMergeType.RESTART,
+                    }),
+                  ]
+                : []),
               makeCell(formatFrequency(row.frequencyMHz), {
                 align: AlignmentType.CENTER,
               }),
@@ -300,11 +458,10 @@ function makeResultsTable(params: ReportBuildParams) {
               makeCell(formatNumber(row.maxPeak), {
                 align: AlignmentType.CENTER,
               }),
-              makeCell(row.graphValue || "-", {
-                align: AlignmentType.CENTER,
-              }),
+              makeImageCell(rowImages[index], row.graphValue || "-"),
             ],
-          })
+          });
+        }
       ),
     ],
   });
@@ -390,7 +547,7 @@ export async function buildDocx(params: ReportBuildParams) {
     ["Unit IDs", params.unitIds.length ? params.unitIds.join("\n") : "-"],
   ]);
 
-  const resultsTable = makeResultsTable(params);
+  const resultsTable = await makeResultsTable(params);
   const coverHeader = createCoverHeader(logoData);
   const defaultHeader = createHeader(logoData);
   const defaultFooter = createFooter();
