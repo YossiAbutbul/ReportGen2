@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState, useEffect } from "react";
-import { EllipsisVertical, Download } from "lucide-react";
+import { EllipsisVertical, Download, Filter } from "lucide-react";
 
 import {
   TEMPLATE_SCOPE,
@@ -11,6 +11,18 @@ import { buildDocx } from "./services/wordReportBuilder";
 import type { SummaryData } from "./types";
 import { formatFrequency, formatNumber, todayAsDDMMYYYY } from "./utils/format";
 import "./reportGenerator.css";
+
+type FilterState = {
+  unitTypes: string[];
+  unitIds: string[];
+  frequencies: string[];
+};
+
+const EMPTY_FILTERS: FilterState = {
+  unitTypes: [],
+  unitIds: [],
+  frequencies: [],
+};
 
 function downloadBlob(blob: Blob, filename: string) {
   const objectUrl = URL.createObjectURL(blob);
@@ -36,19 +48,70 @@ export default function ReportGeneratorPage() {
   const [hwVersion, setHwVersion] = useState("");
   const [testedPower, setTestedPower] = useState(TEMPLATE_TESTED_POWER);
   const [parsed, setParsed] = useState<SummaryData | null>(null);
-  const [selectedUnitTypes, setSelectedUnitTypes] = useState<string[]>([]);
+  const [filters, setFilters] = useState<FilterState>(EMPTY_FILTERS);
   const [error, setError] = useState("");
   const [isBuilding, setIsBuilding] = useState(false);
   const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
   const [isUploadMenuOpen, setIsUploadMenuOpen] = useState(false);
+  const [isFilterMenuOpen, setIsFilterMenuOpen] = useState(false);
+  const [openFilterField, setOpenFilterField] = useState<keyof FilterState | null>(
+    null
+  );
   const uploadMenuRef = useRef<HTMLDivElement | null>(null);
+  const filterMenuRef = useRef<HTMLDivElement | null>(null);
+
+  const filterOptions = useMemo(() => {
+    if (!parsed) {
+      return {
+        unitTypes: [] as string[],
+        unitIds: [] as string[],
+        frequencies: [] as string[],
+      };
+    }
+
+    return {
+      unitTypes: Array.from(
+        new Set(parsed.rows.map((row) => row.unitType).filter(Boolean))
+      ),
+      unitIds: Array.from(
+        new Set(parsed.rows.map((row) => row.unitId).filter(Boolean))
+      ),
+      frequencies: Array.from(
+        new Set(
+          parsed.rows
+            .map((row) => row.frequencyMHz)
+            .filter((value): value is number => value != null)
+            .map((value) => String(value))
+        )
+      ).sort((left, right) => Number(left) - Number(right)),
+    };
+  }, [parsed]);
 
   const filteredRows = useMemo(() => {
     if (!parsed) return [];
-    if (!selectedUnitTypes.length) return parsed.rows;
+    const selectedUnitTypes = new Set(filters.unitTypes);
+    const selectedUnitIds = new Set(filters.unitIds);
+    const selectedFrequencies = new Set(filters.frequencies);
 
-    return parsed.rows.filter((row) => selectedUnitTypes.includes(row.unitType));
-  }, [parsed, selectedUnitTypes]);
+    return parsed.rows.filter((row) => {
+      if (selectedUnitTypes.size && !selectedUnitTypes.has(row.unitType)) {
+        return false;
+      }
+
+      if (selectedUnitIds.size && !selectedUnitIds.has(row.unitId)) {
+        return false;
+      }
+
+      if (
+        selectedFrequencies.size &&
+        !selectedFrequencies.has(String(row.frequencyMHz ?? ""))
+      ) {
+        return false;
+      }
+
+      return true;
+    });
+  }, [filters, parsed]);
 
   const filteredUnitIds = useMemo(
     () => Array.from(new Set(filteredRows.map((row) => row.unitId).filter(Boolean))),
@@ -94,11 +157,12 @@ export default function ReportGeneratorPage() {
         );
       }
 
-      setSelectedUnitTypes(result.uniqueUnitTypes);
+      setFilters(EMPTY_FILTERS);
+      setOpenFilterField(null);
       setParsed(result);
     } catch (err) {
       setParsed(null);
-      setSelectedUnitTypes([]);
+      setFilters(EMPTY_FILTERS);
       setError(err instanceof Error ? err.message : "Failed to parse the file.");
     }
   }
@@ -149,7 +213,7 @@ export default function ReportGeneratorPage() {
   function clearAll() {
     setExcelFileName("");
     setParsed(null);
-    setSelectedUnitTypes([]);
+    setFilters(EMPTY_FILTERS);
     setError("");
     setReportDate(todayAsDDMMYYYY());
     setFwVersion("");
@@ -196,34 +260,48 @@ export default function ReportGeneratorPage() {
     return Boolean(value?.trim());
   }
 
-  function toggleUnitType(unitType: string) {
-      setSelectedUnitTypes((current) =>
-        current.includes(unitType)
-          ? current.length === 1
-            ? current
-            : current.filter((value) => value !== unitType)
-          : [...current, unitType]
-      );
-    }
+  function toggleFilterValue(key: keyof FilterState, value: string) {
+    setFilters((current) => {
+      const nextValues = current[key].includes(value)
+        ? current[key].filter((item) => item !== value)
+        : [...current[key], value];
 
-    useEffect(() => {
+      return { ...current, [key]: nextValues };
+    });
+  }
+
+  function clearFilters() {
+    setFilters(EMPTY_FILTERS);
+    setOpenFilterField(null);
+  }
+
+  const activeFilterCount = useMemo(
+    () => Object.values(filters).reduce((total, values) => total + values.length, 0),
+    [filters]
+  );
+
+  useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (
-        uploadMenuRef.current &&
-        !uploadMenuRef.current.contains(event.target as Node)
-      ) {
+      const target = event.target as Node;
+
+      if (uploadMenuRef.current && !uploadMenuRef.current.contains(target)) {
         setIsUploadMenuOpen(false);
+      }
+
+      if (filterMenuRef.current && !filterMenuRef.current.contains(target)) {
+        setIsFilterMenuOpen(false);
+        setOpenFilterField(null);
       }
     }
 
-    if (isUploadMenuOpen) {
+    if (isUploadMenuOpen || isFilterMenuOpen) {
       document.addEventListener("mousedown", handleClickOutside);
     }
 
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [isUploadMenuOpen]);
+  }, [isFilterMenuOpen, isUploadMenuOpen]);
 
   return (
     <div className="page">
@@ -456,25 +534,91 @@ export default function ReportGeneratorPage() {
                 <div>
                   <h3>Preview of radiated results</h3>
                 </div>
-              </div>
-              {parsed?.uniqueUnitTypes.length ? (
-                <div className="unitTypeFilterRow">
-                  {parsed.uniqueUnitTypes.map((unitType) => {
-                    const isSelected = selectedUnitTypes.includes(unitType);
+                <div className="filterMenuAnchor" ref={filterMenuRef}>
+                  <button
+                    type="button"
+                    className={`filterToggleButton${activeFilterCount ? " isActive" : ""}`}
+                    onClick={() => setIsFilterMenuOpen((current) => !current)}
+                    aria-haspopup="dialog"
+                    aria-expanded={isFilterMenuOpen}
+                  >
+                    <Filter size={16} />
+                    <span>Filter</span>
+                    {activeFilterCount ? (
+                      <span className="filterCountBadge">{activeFilterCount}</span>
+                    ) : null}
+                  </button>
 
-                    return (
-                      <button
-                        key={unitType}
-                        type="button"
-                        className={`unitTypeChip${isSelected ? " isActive" : ""}`}
-                        onClick={() => toggleUnitType(unitType)}
-                      >
-                        {unitType}
-                      </button>
-                    );
-                  })}
+                  {isFilterMenuOpen ? (
+                    <div className="filterMenuPanel" role="dialog" aria-label="Filter rows">
+                      <div className="filterMenuGrid">
+                        {(["unitTypes", "unitIds", "frequencies"] as const).map((key) => {
+                          const labelMap = {
+                            unitTypes: "Unit type",
+                            unitIds: "Unit ID",
+                            frequencies: "Frequency",
+                          };
+                          const values = filterOptions[key];
+                          const selectedValues = filters[key];
+                          const isOpen = openFilterField === key;
+
+                          return (
+                            <div key={key} className="filterField">
+                              <label>{labelMap[key]}</label>
+                              <button
+                                type="button"
+                                className="filterSelectButton"
+                                onClick={() =>
+                                  setOpenFilterField((current) =>
+                                    current === key ? null : key
+                                  )
+                                }
+                              >
+                                <span>
+                                  {selectedValues.length
+                                    ? `${selectedValues.length} selected`
+                                    : "Select values"}
+                                </span>
+                              </button>
+
+                              {isOpen ? (
+                                <div className="filterSelectMenu">
+                                  <div className="filterOptionList">
+                                    {values.map((value) => (
+                                      <label key={value} className="filterOptionItem">
+                                        <input
+                                          type="checkbox"
+                                          checked={selectedValues.includes(value)}
+                                          onChange={() => toggleFilterValue(key, value)}
+                                        />
+                                        <span>
+                                          {key === "frequencies"
+                                            ? formatFrequency(Number(value))
+                                            : value}
+                                        </span>
+                                      </label>
+                                    ))}
+                                  </div>
+                                </div>
+                              ) : null}
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      <div className="filterMenuActions">
+                        <button
+                          type="button"
+                          className="secondary"
+                          onClick={clearFilters}
+                        >
+                          Clear filters
+                        </button>
+                      </div>
+                    </div>
+                  ) : null}
                 </div>
-              ) : null}
+              </div>
               <div className="tableWrap">
                 <table className="resultsTable resultsTableHead">
                   <colgroup>
