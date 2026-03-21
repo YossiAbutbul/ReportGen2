@@ -698,7 +698,6 @@ button.secondary {
   min-height: 16px;
   margin: 0;
   accent-color: var(--brand-navy);
-  vertical-align: middle;
 }
 
 .filterOptionItem span {
