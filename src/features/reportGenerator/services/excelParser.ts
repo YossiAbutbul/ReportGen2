@@ -85,18 +85,23 @@ function getSectionUnitType(
   matrix: SheetMatrix,
   sectionStartIndex: number,
   headerRowIndex: number,
-  fallbackValue: string
+  preferredSheetName: string
 ): string {
+  const normalizedSheetName = cleanText(preferredSheetName);
+  if (normalizedSheetName) {
+    return normalizedSheetName;
+  }
+
   for (let rowIndex = headerRowIndex - 1; rowIndex >= sectionStartIndex; rowIndex -= 1) {
     const row = matrix[rowIndex] ?? [];
     const values = row.map((cell) => cleanText(cell)).filter(Boolean);
 
     if (!values.length) continue;
 
-    return values[0] || fallbackValue;
+    return values[0] || normalizedSheetName;
   }
 
-  return fallbackValue;
+  return normalizedSheetName;
 }
 
 function extractSectionRows(
