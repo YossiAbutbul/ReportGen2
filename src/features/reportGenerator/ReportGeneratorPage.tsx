@@ -472,6 +472,7 @@ export default function ReportGeneratorPage() {
                   <label htmlFor="report-title">Report title</label>
                   <input
                     id="report-title"
+                    autoComplete="off"
                     value={reportTitle}
                     onChange={(event) => setReportTitle(event.target.value)}
                   />
@@ -481,6 +482,7 @@ export default function ReportGeneratorPage() {
                   <label htmlFor="report-author">Author</label>
                   <input
                     id="report-author"
+                    autoComplete="off"
                     value={author}
                     onChange={(event) => setAuthor(event.target.value)}
                   />
@@ -490,6 +492,7 @@ export default function ReportGeneratorPage() {
                   <label htmlFor="report-date">Date</label>
                   <input
                     id="report-date"
+                    autoComplete="off"
                     value={reportDate}
                     onChange={(event) => setReportDate(event.target.value)}
                   />
@@ -499,6 +502,7 @@ export default function ReportGeneratorPage() {
                   <label htmlFor="tested-power">Tested power</label>
                   <input
                     id="tested-power"
+                    autoComplete="off"
                     value={testedPower}
                     onChange={(event) => setTestedPower(event.target.value)}
                   />
@@ -508,6 +512,7 @@ export default function ReportGeneratorPage() {
                   <label htmlFor="fw-version">F.W. Version</label>
                   <input
                     id="fw-version"
+                    autoComplete="off"
                     placeholder="e.g. 2E.51"
                     value={fwVersion}
                     onChange={(event) => setFwVersion(event.target.value)}
@@ -518,6 +523,7 @@ export default function ReportGeneratorPage() {
                   <label htmlFor="hw-version">H.W. Version</label>
                   <input
                     id="hw-version"
+                    autoComplete="off"
                     placeholder="e.g. 08.06"
                     value={hwVersion}
                     onChange={(event) => setHwVersion(event.target.value)}
@@ -529,6 +535,7 @@ export default function ReportGeneratorPage() {
                 <label htmlFor="scope-of-testing">Scope of Testing</label>
                 <textarea
                   id="scope-of-testing"
+                  autoComplete="off"
                   className="scopeTextarea"
                   rows={4}
                   value={scopeOfTesting}
@@ -683,6 +690,7 @@ export default function ReportGeneratorPage() {
                                 <div className="filterSelectMenu">
                                   <input
                                     className="filterSearchInput"
+                                    autoComplete="off"
                                     value={searchValue}
                                     onChange={(event) =>
                                       setFilterSearch((current) => ({

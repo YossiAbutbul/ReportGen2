@@ -1,13 +1,14 @@
 :root {
-  --arad-navy: #0c3f8c;
-  --arad-blue: #1da2dd;
-  --arad-sky: #dff4fb;
-  --arad-ice: #eef8fd;
-  --arad-line: rgba(12, 63, 140, 0.12);
-  --arad-line-strong: rgba(12, 63, 140, 0.22);
-  --arad-text: #17324f;
-  --arad-muted: #64809a;
-  --arad-shell-shadow: rgba(15, 52, 104, 0.18);
+  --brand-navy: #0c3f8c;
+  --brand-blue: #1da2dd;
+  --brand-sky: #dff4fb;
+  --brand-ice: #eef8fd;
+  --line-soft: rgba(12, 63, 140, 0.12);
+  --line-strong: rgba(12, 63, 140, 0.22);
+  --text-primary: #17324f;
+  --text-muted: #64809a;
+  --text-placeholder: #000000;
+  --shell-shadow: rgba(15, 52, 104, 0.18);
 }
 
 .page {
@@ -34,7 +35,7 @@
   border: 1px solid rgba(255, 255, 255, 0.55);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.92),
-    0 24px 60px var(--arad-shell-shadow);
+    0 24px 60px var(--shell-shadow);
 }
 
 .heroCard,
@@ -73,7 +74,7 @@
 .heroText {
   margin: 0;
   max-width: 600px;
-  color: var(--arad-muted);
+  color: var(--text-muted);
   font-size: 14px;
   line-height: 1.45;
 }
@@ -91,7 +92,7 @@
 }
 
 .statCard.accent {
-  background: linear-gradient(135deg, var(--arad-navy), #175ebf);
+  background: linear-gradient(135deg, var(--brand-navy), #175ebf);
 }
 
 .statCard.accent .muted,
@@ -153,7 +154,7 @@
   font-weight: 700;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: var(--arad-muted);
+  color: var(--text-muted);
 }
 
 .panelHeader h2,
@@ -191,7 +192,7 @@
 }
 
 .muted {
-  color: var(--arad-muted);
+  color: var(--text-muted);
 }
 
 .uploadRow {
@@ -223,8 +224,8 @@
   justify-content: center;
   border-radius: 14px;
   background: rgba(255, 255, 255, 0.92);
-  color: var(--arad-navy);
-  border: 1px solid var(--arad-line);
+  color: var(--brand-navy);
+  border: 1px solid var(--line-soft);
   box-shadow: none;
 }
 
@@ -236,7 +237,7 @@
   padding: 8px;
   border-radius: 16px;
   background: rgba(255, 255, 255, 0.98);
-  border: 1px solid var(--arad-line);
+  border: 1px solid var(--line-soft);
   box-shadow: 0 14px 30px rgba(15, 52, 104, 0.14);
   z-index: 20;
 }
@@ -250,12 +251,12 @@
   gap: 10px;
   border-radius: 12px;
   background: transparent;
-  color: var(--arad-text);
+  color: var(--text-primary);
   box-shadow: none;
 }
 
 .uploadMenuItem:hover {
-  background: var(--arad-ice);
+  background: var(--brand-ice);
   transform: none;
   opacity: 1;
 }
@@ -270,7 +271,7 @@
   padding: 0 14px;
   border-radius: 14px;
   background: rgba(255, 255, 255, 0.9);
-  border: 1px solid var(--arad-line);
+  border: 1px solid var(--line-soft);
   color: #4d6881;
   font-size: 13px;
   white-space: nowrap;
@@ -286,7 +287,7 @@
   min-height: 38px;
   padding: 0 18px;
   border-radius: 14px !important;
-  background: linear-gradient(135deg, var(--arad-navy), #1657af) !important;
+  background: linear-gradient(135deg, var(--brand-navy), #1657af) !important;
   color: #f4fbff !important;
   font-size: 13px;
   font-weight: 700;
@@ -316,18 +317,18 @@
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--arad-muted);
+  color: var(--text-muted);
 }
 
 .formGrid input,
 .panel textarea {
   width: 100%;
   min-height: 38px;
-  border: 1px solid var(--arad-line);
+  border: 1px solid var(--line-soft);
   border-radius: 8px;
   padding: 0 14px;
   background: rgba(255, 255, 255, 0.9);
-  color: #4d6881;
+  color: #000000;
   font-size: 13px;
   font-family: inherit;
   box-shadow: none;
@@ -336,6 +337,13 @@
 .formGrid input:focus,
 .panel textarea:focus {
   outline: 0;
+}
+
+.formGrid input::placeholder,
+.panel textarea::placeholder,
+.filterSearchInput::placeholder {
+  color: var(--text-placeholder);
+  opacity: 1;
 }
 
 .panel textarea {
@@ -368,13 +376,13 @@
 .stickyActions {
   margin-top: 0;
   padding-top: 14px;
-  border-top: 1px solid var(--arad-line);
+  border-top: 1px solid var(--line-soft);
 }
 
 button {
   border: none;
   border-radius: 18px;
-  background: linear-gradient(135deg, var(--arad-navy), #1657af);
+  background: linear-gradient(135deg, var(--brand-navy), #1657af);
   color: #f4fbff;
   padding: 13px 18px;
   cursor: pointer;
@@ -398,8 +406,8 @@ button:disabled {
 
 button.secondary {
   background: rgba(255, 255, 255, 0.92);
-  color: var(--arad-navy);
-  border: 1px solid var(--arad-line);
+  color: var(--brand-navy);
+  border: 1px solid var(--line-soft);
 }
 
 .primaryAction {
@@ -419,14 +427,14 @@ button.secondary {
   font-size: clamp(30px, 2.8vw, 44px);
   line-height: 0.95;
   letter-spacing: -0.06em;
-  color: var(--arad-navy);
+  color: var(--brand-navy);
 }
 
 .box {
   padding: 14px 16px;
   background: rgba(255, 255, 255, 0.72);
-  border: 1px solid var(--arad-line);
-  color: var(--arad-text);
+  border: 1px solid var(--line-soft);
+  color: var(--text-primary);
 }
 
 .listArea {
@@ -491,8 +499,8 @@ button.secondary {
   padding: 0 12px;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.92);
-  border: 1px solid var(--arad-line);
-  color: var(--arad-text);
+  border: 1px solid var(--line-soft);
+  color: var(--text-primary);
   font-size: 13px;
   font-weight: 600;
   white-space: nowrap;
@@ -509,8 +517,8 @@ button.secondary {
 
 .dataBadgeAccent {
   background: rgba(255, 255, 255, 0.92);
-  border-color: var(--arad-line);
-  color: var(--arad-text);
+  border-color: var(--line-soft);
+  color: var(--text-primary);
 }
 
 .tableHeader {
@@ -533,8 +541,8 @@ button.secondary {
   gap: 8px;
   border-radius: 14px;
   background: rgba(255, 255, 255, 0.92);
-  color: var(--arad-navy);
-  border: 1px solid var(--arad-line);
+  color: var(--brand-navy);
+  border: 1px solid var(--line-soft);
   box-shadow: none;
 }
 
@@ -552,7 +560,7 @@ button.secondary {
   align-items: center;
   justify-content: center;
   border-radius: 999px;
-  background: var(--arad-navy);
+  background: var(--brand-navy);
   color: #f5fbff;
   font-size: 11px;
   font-weight: 700;
@@ -566,7 +574,7 @@ button.secondary {
   padding: 16px;
   border-radius: 18px;
   background: rgba(255, 255, 255, 0.98);
-  border: 1px solid var(--arad-line);
+  border: 1px solid var(--line-soft);
   box-shadow: 0 18px 34px rgba(15, 52, 104, 0.14);
   z-index: 25;
 }
@@ -584,7 +592,7 @@ button.secondary {
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--arad-muted);
+  color: var(--text-muted);
 }
 
 .filterField {
@@ -600,8 +608,8 @@ button.secondary {
   justify-content: space-between;
   border-radius: 12px;
   background: rgba(255, 255, 255, 0.92);
-  color: #4d6881;
-  border: 1px solid var(--arad-line);
+  color: #000000;
+  border: 1px solid var(--line-soft);
   box-shadow: none;
   overflow: hidden;
   white-space: nowrap;
@@ -621,7 +629,7 @@ button.secondary {
   padding: 8px;
   border-radius: 14px;
   background: rgba(255, 255, 255, 0.99);
-  border: 1px solid var(--arad-line);
+  border: 1px solid var(--line-soft);
   box-shadow: 0 14px 28px rgba(15, 52, 104, 0.12);
   z-index: 4;
 }
@@ -630,11 +638,11 @@ button.secondary {
   width: 100%;
   min-height: 36px;
   margin-bottom: 8px;
-  border: 1px solid var(--arad-line);
+  border: 1px solid var(--line-soft);
   border-radius: 10px;
   padding: 0 12px;
   background: rgba(255, 255, 255, 0.96);
-  color: #4d6881;
+  color: #000000;
   font-size: 13px;
   font-family: inherit;
 }
@@ -642,7 +650,7 @@ button.secondary {
 .filterSearchInput:focus {
   outline: none;
   box-shadow: none;
-  border-color: var(--arad-line);
+  border-color: var(--line-soft);
 }
 
 .filterOptionList {
@@ -673,13 +681,13 @@ button.secondary {
   font-weight: 600;
   letter-spacing: normal;
   text-transform: none;
-  color: var(--arad-text);
+  color: var(--text-primary);
   cursor: pointer;
   white-space: normal;
 }
 
 .filterOptionItem:hover {
-  background: var(--arad-ice);
+  background: var(--brand-ice);
 }
 
 .filterOptionItem input {
@@ -689,7 +697,7 @@ button.secondary {
   height: 16px;
   min-height: 16px;
   margin: 0;
-  accent-color: var(--arad-navy);
+  accent-color: var(--brand-navy);
   vertical-align: middle;
 }
 
@@ -703,7 +711,7 @@ button.secondary {
 
 .filterEmptyState {
   padding: 12px 10px;
-  color: var(--arad-muted);
+  color: var(--text-muted);
   font-size: 13px;
 }
 
@@ -712,7 +720,7 @@ button.secondary {
   justify-content: flex-end;
   margin-top: 14px;
   padding-top: 14px;
-  border-top: 1px solid var(--arad-line);
+  border-top: 1px solid var(--line-soft);
 }
 
 .tableSection {
@@ -751,7 +759,7 @@ button.secondary {
   align-items: center;
   justify-content: center;
   padding: 24px;
-  color: var(--arad-muted);
+  color: var(--text-muted);
   font-size: 14px;
 }
 
@@ -771,7 +779,7 @@ button.secondary {
 }
 
 .resultsTableHead {
-  border-bottom: 1px solid var(--arad-line);
+  border-bottom: 1px solid var(--line-soft);
 }
 
 .colUnitId {
@@ -794,7 +802,7 @@ button.secondary {
 th,
 td {
   padding: 12px 12px;
-  border-bottom: 1px solid var(--arad-line);
+  border-bottom: 1px solid var(--line-soft);
   text-align: left;
   font-size: 13px;
   white-space: nowrap;
@@ -834,7 +842,7 @@ td {
 
 .emptyCell {
   text-align: center;
-  color: var(--arad-muted);
+  color: var(--text-muted);
   padding: 42px 24px;
   border-bottom: none;
 }
@@ -876,7 +884,7 @@ td {
   box-sizing: border-box;
   object-fit: contain;
   border-radius: 18px;
-  background: var(--arad-ice);
+  background: var(--brand-ice);
 }
 
 @media (max-width: 1080px) {
