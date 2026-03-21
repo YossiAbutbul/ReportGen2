@@ -452,7 +452,7 @@ export default function ReportGeneratorPage() {
                           onClick={downloadTemplate}
                         >
                           <Download size={16} />
-                          <span>Download template</span>
+                          <span>Download Template</span>
                         </button>
                       </div>
                     )}

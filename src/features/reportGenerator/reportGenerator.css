@@ -253,6 +253,7 @@
   background: transparent;
   color: var(--text-primary);
   box-shadow: none;
+  white-space: nowrap;
 }
 
 .uploadMenuItem:hover {
