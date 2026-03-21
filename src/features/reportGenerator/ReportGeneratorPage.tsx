@@ -18,11 +18,71 @@ type FilterState = {
   frequencies: string[];
 };
 
+type FilterSearchState = Record<keyof FilterState, string>;
+
 const EMPTY_FILTERS: FilterState = {
   unitTypes: [],
   unitIds: [],
   frequencies: [],
 };
+
+const EMPTY_FILTER_SEARCH: FilterSearchState = {
+  unitTypes: "",
+  unitIds: "",
+  frequencies: "",
+};
+
+function formatFilterSummary(
+  key: keyof FilterState,
+  selectedValues: string[]
+) {
+  if (!selectedValues.length) {
+    return "Select values";
+  }
+
+  const labels = selectedValues.map((value) =>
+    key === "frequencies" ? formatFrequency(Number(value)) : value
+  );
+
+  const firstLabel = labels[0] ?? "";
+  if (labels.length === 1) {
+    return firstLabel;
+  }
+
+  return `${firstLabel} +${labels.length - 1}`;
+}
+
+function filterRowsBySelections(
+  rows: SummaryData["rows"],
+  filters: FilterState,
+  ignoredKey?: keyof FilterState
+) {
+  const selectedUnitTypes =
+    ignoredKey === "unitTypes" ? new Set<string>() : new Set(filters.unitTypes);
+  const selectedUnitIds =
+    ignoredKey === "unitIds" ? new Set<string>() : new Set(filters.unitIds);
+  const selectedFrequencies =
+    ignoredKey === "frequencies" ? new Set<string>() : new Set(filters.frequencies);
+
+  return rows.filter((row) => {
+    if (selectedUnitTypes.size && !selectedUnitTypes.has(row.unitType)) {
+      return false;
+    }
+
+    if (selectedUnitIds.size && !selectedUnitIds.has(row.unitId)) {
+      return false;
+    }
+
+    if (
+      selectedFrequencies.size &&
+      !selectedFrequencies.has(String(row.frequencyMHz ?? ""))
+    ) {
+      return false;
+    }
+
+    return true;
+  });
+}
 
 function downloadBlob(blob: Blob, filename: string) {
   const objectUrl = URL.createObjectURL(blob);
@@ -57,6 +117,8 @@ export default function ReportGeneratorPage() {
   const [openFilterField, setOpenFilterField] = useState<keyof FilterState | null>(
     null
   );
+  const [filterSearch, setFilterSearch] =
+    useState<FilterSearchState>(EMPTY_FILTER_SEARCH);
   const uploadMenuRef = useRef<HTMLDivElement | null>(null);
   const filterMenuRef = useRef<HTMLDivElement | null>(null);
 
@@ -69,48 +131,36 @@ export default function ReportGeneratorPage() {
       };
     }
 
+    const rowsForUnitTypes = filterRowsBySelections(parsed.rows, filters, "unitTypes");
+    const rowsForUnitIds = filterRowsBySelections(parsed.rows, filters, "unitIds");
+    const rowsForFrequencies = filterRowsBySelections(
+      parsed.rows,
+      filters,
+      "frequencies"
+    );
+
     return {
       unitTypes: Array.from(
-        new Set(parsed.rows.map((row) => row.unitType).filter(Boolean))
+        new Set(rowsForUnitTypes.map((row) => row.unitType).filter(Boolean))
       ),
       unitIds: Array.from(
-        new Set(parsed.rows.map((row) => row.unitId).filter(Boolean))
+        new Set(rowsForUnitIds.map((row) => row.unitId).filter(Boolean))
       ),
       frequencies: Array.from(
         new Set(
-          parsed.rows
+          rowsForFrequencies
             .map((row) => row.frequencyMHz)
             .filter((value): value is number => value != null)
             .map((value) => String(value))
         )
       ).sort((left, right) => Number(left) - Number(right)),
     };
-  }, [parsed]);
+  }, [filters, parsed]);
 
   const filteredRows = useMemo(() => {
     if (!parsed) return [];
-    const selectedUnitTypes = new Set(filters.unitTypes);
-    const selectedUnitIds = new Set(filters.unitIds);
-    const selectedFrequencies = new Set(filters.frequencies);
 
-    return parsed.rows.filter((row) => {
-      if (selectedUnitTypes.size && !selectedUnitTypes.has(row.unitType)) {
-        return false;
-      }
-
-      if (selectedUnitIds.size && !selectedUnitIds.has(row.unitId)) {
-        return false;
-      }
-
-      if (
-        selectedFrequencies.size &&
-        !selectedFrequencies.has(String(row.frequencyMHz ?? ""))
-      ) {
-        return false;
-      }
-
-      return true;
-    });
+    return filterRowsBySelections(parsed.rows, filters);
   }, [filters, parsed]);
 
   const filteredUnitIds = useMemo(
@@ -158,11 +208,13 @@ export default function ReportGeneratorPage() {
       }
 
       setFilters(EMPTY_FILTERS);
+      setFilterSearch(EMPTY_FILTER_SEARCH);
       setOpenFilterField(null);
       setParsed(result);
     } catch (err) {
       setParsed(null);
       setFilters(EMPTY_FILTERS);
+      setFilterSearch(EMPTY_FILTER_SEARCH);
       setError(err instanceof Error ? err.message : "Failed to parse the file.");
     }
   }
@@ -214,6 +266,7 @@ export default function ReportGeneratorPage() {
     setExcelFileName("");
     setParsed(null);
     setFilters(EMPTY_FILTERS);
+    setFilterSearch(EMPTY_FILTER_SEARCH);
     setError("");
     setReportDate(todayAsDDMMYYYY());
     setFwVersion("");
@@ -272,6 +325,7 @@ export default function ReportGeneratorPage() {
 
   function clearFilters() {
     setFilters(EMPTY_FILTERS);
+    setFilterSearch(EMPTY_FILTER_SEARCH);
     setOpenFilterField(null);
   }
 
@@ -302,6 +356,29 @@ export default function ReportGeneratorPage() {
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, [isFilterMenuOpen, isUploadMenuOpen]);
+
+  useEffect(() => {
+    setFilters((current) => {
+      const nextFilters: FilterState = {
+        unitTypes: current.unitTypes.filter((value) =>
+          filterOptions.unitTypes.includes(value)
+        ),
+        unitIds: current.unitIds.filter((value) =>
+          filterOptions.unitIds.includes(value)
+        ),
+        frequencies: current.frequencies.filter((value) =>
+          filterOptions.frequencies.includes(value)
+        ),
+      };
+
+      const changed =
+        nextFilters.unitTypes.length !== current.unitTypes.length ||
+        nextFilters.unitIds.length !== current.unitIds.length ||
+        nextFilters.frequencies.length !== current.frequencies.length;
+
+      return changed ? nextFilters : current;
+    });
+  }, [filterOptions]);
 
   return (
     <div className="page">
@@ -550,7 +627,17 @@ export default function ReportGeneratorPage() {
                   </button>
 
                   {isFilterMenuOpen ? (
-                    <div className="filterMenuPanel" role="dialog" aria-label="Filter rows">
+                    <div
+                      className="filterMenuPanel"
+                      role="dialog"
+                      aria-label="Filter rows"
+                      onMouseDown={(event) => {
+                        const target = event.target as HTMLElement;
+                        if (!target.closest(".filterField")) {
+                          setOpenFilterField(null);
+                        }
+                      }}
+                    >
                       <div className="filterMenuGrid">
                         {(["unitTypes", "unitIds", "frequencies"] as const).map((key) => {
                           const labelMap = {
@@ -561,6 +648,19 @@ export default function ReportGeneratorPage() {
                           const values = filterOptions[key];
                           const selectedValues = filters[key];
                           const isOpen = openFilterField === key;
+                          const searchValue = filterSearch[key];
+                          const normalizedSearch = searchValue.trim().toLowerCase();
+                          const visibleValues = values.filter((value) => {
+                            const label =
+                              key === "frequencies"
+                                ? formatFrequency(Number(value))
+                                : value;
+
+                            return (
+                              !normalizedSearch ||
+                              label.toLowerCase().includes(normalizedSearch)
+                            );
+                          });
 
                           return (
                             <div key={key} className="filterField">
@@ -575,16 +675,26 @@ export default function ReportGeneratorPage() {
                                 }
                               >
                                 <span>
-                                  {selectedValues.length
-                                    ? `${selectedValues.length} selected`
-                                    : "Select values"}
+                                  {formatFilterSummary(key, selectedValues)}
                                 </span>
                               </button>
 
                               {isOpen ? (
                                 <div className="filterSelectMenu">
+                                  <input
+                                    className="filterSearchInput"
+                                    value={searchValue}
+                                    onChange={(event) =>
+                                      setFilterSearch((current) => ({
+                                        ...current,
+                                        [key]: event.target.value,
+                                      }))
+                                    }
+                                    placeholder={`Search ${labelMap[key].toLowerCase()}`}
+                                  />
                                   <div className="filterOptionList">
-                                    {values.map((value) => (
+                                    {visibleValues.length ? (
+                                      visibleValues.map((value) => (
                                       <label key={value} className="filterOptionItem">
                                         <input
                                           type="checkbox"
@@ -597,7 +707,12 @@ export default function ReportGeneratorPage() {
                                             : value}
                                         </span>
                                       </label>
-                                    ))}
+                                      ))
+                                    ) : (
+                                      <div className="filterEmptyState">
+                                        No matching options
+                                      </div>
+                                    )}
                                   </div>
                                 </div>
                               ) : null}

@@ -21,7 +21,7 @@ import {
 
 import aradLogoUrl from "../../../assets/arad-logo-from-sample.jpeg";
 import testSetupSvgUrl from "../../../assets/generic-trp-test-setup.svg";
-import type { ReportBuildParams } from "../types";
+import type { ReportBuildParams, ResultRow } from "../types";
 import { formatFrequency, formatNumber } from "../utils/format";
 
 const brandBlue = "002060";
@@ -168,6 +168,7 @@ function paragraph(
   return new Paragraph({
     heading: options?.heading,
     alignment: options?.alignment,
+    bidirectional: false,
     pageBreakBefore: options?.pageBreakBefore,
     spacing: { after: options?.spacingAfter ?? 140 },
     children: [
@@ -177,6 +178,7 @@ function paragraph(
         color: options?.color,
         size: options?.size,
         italics: options?.italics,
+        rightToLeft: false,
       }),
     ],
   });
@@ -189,6 +191,7 @@ function sectionHeading(
 ) {
   return new Paragraph({
     heading: level,
+    bidirectional: false,
     pageBreakBefore,
     spacing: { before: 120, after: 220 },
     children: [
@@ -197,6 +200,7 @@ function sectionHeading(
         bold: true,
         color: brandBlue,
         size: level === HeadingLevel.HEADING_1 ? 32 : 26,
+        rightToLeft: false,
       }),
     ],
   });
@@ -245,6 +249,7 @@ function makeCell(
       (line) =>
         new Paragraph({
           alignment: options?.align ?? AlignmentType.LEFT,
+          bidirectional: false,
           spacing: { after: 0 },
           children: [
             new TextRun({
@@ -252,6 +257,7 @@ function makeCell(
               bold: !!options?.header || !!options?.bold,
               color: "000000",
               size: 21,
+              rightToLeft: false,
             }),
           ],
         })
@@ -288,6 +294,7 @@ function makeImageCell(
       ? [
           new Paragraph({
             alignment: AlignmentType.CENTER,
+            bidirectional: false,
             spacing: { after: 0 },
             children: [
               new ImageRun({
@@ -310,11 +317,13 @@ function makeImageCell(
       : [
           new Paragraph({
             alignment: AlignmentType.CENTER,
+            bidirectional: false,
             spacing: { after: 0 },
             children: [
               new TextRun({
                 text: fallbackText,
                 size: 21,
+                rightToLeft: false,
               }),
             ],
           }),
@@ -324,6 +333,7 @@ function makeImageCell(
 
 function makeLabelValueTable(rows: Array<[string, string]>) {
   return new Table({
+    alignment: AlignmentType.LEFT,
     width: { size: 100, type: WidthType.PERCENTAGE },
     layout: TableLayoutType.FIXED,
     borders: {
@@ -346,23 +356,55 @@ function makeLabelValueTable(rows: Array<[string, string]>) {
       new TableRow({
         tableHeader: true,
         children: [
-          makeCell("Parameter", { header: true, widthPct: 35 }),
-          makeCell("Value", { header: true, widthPct: 65 }),
+          makeCell("Parameter", {
+            header: true,
+            widthPct: 35,
+            align: AlignmentType.LEFT,
+          }),
+          makeCell("Value", {
+            header: true,
+            widthPct: 65,
+            align: AlignmentType.LEFT,
+          }),
         ],
       }),
       ...rows.map(
         ([label, value]) =>
           new TableRow({
-            children: [makeCell(label, { bold: true }), makeCell(value || "-")],
+            children: [
+              makeCell(label, { bold: true, align: AlignmentType.LEFT }),
+              makeCell(value || "-", { align: AlignmentType.LEFT }),
+            ],
           })
       ),
     ],
   });
 }
 
-async function makeResultsTable(params: ReportBuildParams) {
+function groupRowsByUnitType(rows: ResultRow[]) {
+  const groups = new Map<string, ResultRow[]>();
+
+  rows.forEach((row) => {
+    const key = row.unitType || "Unknown Unit Type";
+    const current = groups.get(key);
+
+    if (current) {
+      current.push(row);
+      return;
+    }
+
+    groups.set(key, [row]);
+  });
+
+  return Array.from(groups.entries()).map(([unitType, unitRows]) => ({
+    unitType,
+    rows: unitRows,
+  }));
+}
+
+async function makeResultsTable(rows: ResultRow[]) {
   const rowImages = await Promise.all(
-    params.rows.map(async (row) => {
+    rows.map(async (row) => {
       if (!row.photoValue) return null;
 
       try {
@@ -374,6 +416,7 @@ async function makeResultsTable(params: ReportBuildParams) {
   );
 
   return new Table({
+    alignment: AlignmentType.LEFT,
     width: { size: 100, type: WidthType.PERCENTAGE },
     layout: TableLayoutType.FIXED,
     borders: {
@@ -423,15 +466,15 @@ async function makeResultsTable(params: ReportBuildParams) {
           }),
         ],
       }),
-      ...params.rows.map(
+      ...rows.map(
         (row, index) => {
-          const previousRow = params.rows[index - 1];
+          const previousRow = rows[index - 1];
           const startsUnitGroup = previousRow?.unitId !== row.unitId;
           let groupSize = 1;
 
           if (startsUnitGroup) {
-            for (let cursor = index + 1; cursor < params.rows.length; cursor += 1) {
-              if (params.rows[cursor]?.unitId !== row.unitId) break;
+            for (let cursor = index + 1; cursor < rows.length; cursor += 1) {
+              if (rows[cursor]?.unitId !== row.unitId) break;
               groupSize += 1;
             }
           }
@@ -465,6 +508,22 @@ async function makeResultsTable(params: ReportBuildParams) {
       ),
     ],
   });
+}
+
+async function makeResultsSections(rows: ResultRow[]) {
+  const unitTypeGroups = groupRowsByUnitType(rows);
+  const sections: Array<Paragraph | Table> = [];
+
+  for (let index = 0; index < unitTypeGroups.length; index += 1) {
+    const group = unitTypeGroups[index];
+
+    sections.push(
+      sectionHeading(group.unitType, HeadingLevel.HEADING_2, index > 0),
+      await makeResultsTable(group.rows)
+    );
+  }
+
+  return sections;
 }
 
 function createHeader(logoData: ArrayBuffer) {
@@ -533,21 +592,24 @@ export async function buildDocx(params: ReportBuildParams) {
   const testSetupGraphic = await loadSvgImageOptions(testSetupSvgUrl);
 
   const frequencyLines = params.frequencies.length
-    ? params.frequencies.map((value) => `LoRa ${formatFrequency(value)}`)
-    : ["LoRa -"];
+    ? params.frequencies.map((value) => formatFrequency(value))
+    : ["-"];
 
   const measurementParametersTable = makeLabelValueTable([
     ["Frequency", frequencyLines.join("\n")],
     ["Tested Power", params.testedPower || "-"],
   ]);
 
-  const testParametersTable = makeLabelValueTable([
+  const firmwareParametersTable = makeLabelValueTable([
     ["FW Version", params.fwVersion || "-"],
     ["HW Version", params.hwVersion || "-"],
+  ]);
+
+  const unitIdsTable = makeLabelValueTable([
     ["Unit IDs", params.unitIds.length ? params.unitIds.join("\n") : "-"],
   ]);
 
-  const resultsTable = await makeResultsTable(params);
+  const resultsSections = await makeResultsSections(params.rows);
   const coverHeader = createCoverHeader(logoData);
   const defaultHeader = createHeader(logoData);
   const defaultFooter = createFooter();
@@ -696,11 +758,18 @@ export async function buildDocx(params: ReportBuildParams) {
             .map(
               (line, index) =>
                 new Paragraph({
+                  alignment: AlignmentType.LEFT,
+                  bidirectional: false,
+                  indent: {
+                    left: 0,
+                    firstLine: 0,
+                  },
                   spacing: { after: 120 },
                   children: [
                     new TextRun({
-                      text: `${index + 1}. ${line}`,
+                      text: /^\d+\.\s/.test(line) ? line : `${index + 1}. ${line}`,
                       size: 24,
+                      rightToLeft: false,
                     }),
                   ],
                 })
@@ -709,10 +778,13 @@ export async function buildDocx(params: ReportBuildParams) {
           sectionHeading("Measurement Parameters:", HeadingLevel.HEADING_2),
           measurementParametersTable,
           paragraph("", { spacingAfter: 180 }),
+          sectionHeading("Firmware / Hardware Versions:", HeadingLevel.HEADING_2),
+          firmwareParametersTable,
+          paragraph("", { spacingAfter: 180 }),
           sectionHeading("Unit IDs:", HeadingLevel.HEADING_2),
-          testParametersTable,
+          unitIdsTable,
           sectionHeading("Radiated Results", HeadingLevel.HEADING_1, true),
-          resultsTable,
+          ...resultsSections,
           sectionHeading("Notes:", HeadingLevel.HEADING_1, true),
           paragraph(""),
           paragraph(""),

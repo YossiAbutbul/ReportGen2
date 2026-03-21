@@ -603,6 +603,14 @@ button.secondary {
   color: #4d6881;
   border: 1px solid var(--arad-line);
   box-shadow: none;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.filterSelectButton span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .filterSelectMenu {
@@ -616,6 +624,25 @@ button.secondary {
   border: 1px solid var(--arad-line);
   box-shadow: 0 14px 28px rgba(15, 52, 104, 0.12);
   z-index: 4;
+}
+
+.filterSearchInput {
+  width: 100%;
+  min-height: 36px;
+  margin-bottom: 8px;
+  border: 1px solid var(--arad-line);
+  border-radius: 10px;
+  padding: 0 12px;
+  background: rgba(255, 255, 255, 0.96);
+  color: #4d6881;
+  font-size: 13px;
+  font-family: inherit;
+}
+
+.filterSearchInput:focus {
+  outline: none;
+  box-shadow: none;
+  border-color: var(--arad-line);
 }
 
 .filterOptionList {
@@ -672,6 +699,12 @@ button.secondary {
   margin: 0;
   line-height: 1.25;
   word-break: break-word;
+}
+
+.filterEmptyState {
+  padding: 12px 10px;
+  color: var(--arad-muted);
+  font-size: 13px;
 }
 
 .filterMenuActions {

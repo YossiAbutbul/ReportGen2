@@ -1,6 +1,20 @@
 export function toNumber(value: unknown): number | undefined {
   if (value == null || value === "") return undefined;
 
+  if (typeof value === "object") {
+    if ("result" in value) {
+      return toNumber(value.result);
+    }
+
+    if ("text" in value) {
+      return toNumber(value.text);
+    }
+
+    if ("value" in value) {
+      return toNumber(value.value);
+    }
+  }
+
   const numericValue =
     typeof value === "number"
       ? value
@@ -14,13 +28,10 @@ export function cleanText(value: unknown): string {
   return String(value).trim();
 }
 
-export function formatNumber(value?: number, digits = 3): string {
+export function formatNumber(value?: number, digits = 2): string {
   if (value == null || Number.isNaN(value)) return "-";
 
-  return Number(value)
-    .toFixed(digits)
-    .replace(/\.0+$/, "")
-    .replace(/(\.\d*?)0+$/, "$1");
+  return Number(value).toFixed(digits);
 }
 
 export function formatFrequency(value?: number): string {
