@@ -1,53 +1,37 @@
 # ReportGen2
 
-ReportGen2 is a browser-based test report generator built with React, TypeScript, and Vite.
+ReportGen2 is a web-based utility for turning raw RF / lab Excel results into structured, presentation-ready reports.
 
-It lets you:
-
-- upload Excel test result files
-- parse units from multiple sheets
-- filter results by unit type, unit ID, and frequency
-- preview parsed data before export
-- generate a Word report with grouped tables by unit type
+It is designed to reduce manual work when handling test data, especially in workflows where multiple unit types, repeated measurements, and Word report exports are part of the process.
 
 ## Live App
 
 https://yossiabutbul.github.io/ReportGen2/
 
-## Main Features
+## What It Does
 
-- Excel parsing across multiple worksheets
-- Unit type detection from sheet names and section headers
-- Searchable cascading filters
-- Word report generation with separate sections per unit type
-- Local browser-based workflow with no backend required
+- Parses Excel files containing test results across multiple worksheets
+- Detects unit groups and measurement data from the uploaded workbook
+- Lets users filter results by unit type, unit ID, and frequency
+- Organizes report output in a clearer, more readable structure
+- Generates Word reports with separate result tables for each unit type
 
-## Tech Stack
+## Key Highlights
 
-- React
-- TypeScript
-- Vite
-- `exceljs`
-- `docx`
+- Browser-based workflow with no backend dependency
+- Searchable, cascading filters for large datasets
+- Support for multi-sheet Excel sources
+- Cleaner report generation for repetitive lab and validation work
+- Designed to help teams move faster from raw results to deliverable documentation
 
-## Local Development
+## Use Cases
 
-```bash
-npm install
-npm run dev
-```
+ReportGen2 is especially useful for:
 
-## Build
-
-```bash
-npm run build
-```
-
-## Deploy To GitHub Pages
-
-```bash
-npm run deploy
-```
+- RF validation and certification workflows
+- Internal lab reporting
+- Multi-unit / multi-frequency test campaigns
+- Teams that need to turn engineering results into customer-facing documents
 
 ## Repository
 
