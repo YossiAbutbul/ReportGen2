@@ -625,6 +625,7 @@ export default function ReportGeneratorPage() {
                     onClick={() => setIsFilterMenuOpen((current) => !current)}
                     aria-haspopup="dialog"
                     aria-expanded={isFilterMenuOpen}
+                    disabled={!parsed || !parsed.rows.length}
                   >
                     <Filter size={16} />
                     <span>Filter</span>
