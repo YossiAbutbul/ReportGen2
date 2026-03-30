@@ -5,6 +5,7 @@ import {
   TEMPLATE_SCOPE,
   TEMPLATE_TESTED_POWER,
   TEMPLATE_TITLE,
+  TEMPLATE_AUTHOR,
 } from "./constants";
 import { parseWorkbook } from "./services/excelParser";
 import { buildDocx } from "./services/wordReportBuilder";
@@ -111,7 +112,7 @@ function downloadBlob(blob: Blob, filename: string) {
 export default function ReportGeneratorPage() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [excelFileName, setExcelFileName] = useState("");
-  const [author, setAuthor] = useState("Yossi Abutbul");
+  const [author, setAuthor] = useState(TEMPLATE_AUTHOR);
   const [reportTitle, setReportTitle] = useState(TEMPLATE_TITLE);
   const [reportDate, setReportDate] = useState(todayAsDDMMYYYY());
   const [scopeOfTesting, setScopeOfTesting] = useState(TEMPLATE_SCOPE);
