@@ -17,6 +17,85 @@ import type { MatrixCell, ResultRow, SheetMatrix, SummaryData } from "../types";
 import { cleanText, toNumber } from "../utils/format";
 import { getHeaderIndexes, type HeaderIndexes } from "./parsing/sectionHelpers";
 
+function buildFactorLookup(matrix: SheetMatrix): Map<number, number> {
+  const lookup = new Map<number, number>();
+
+  for (let rowIndex = 0; rowIndex < matrix.length; rowIndex += 1) {
+    const row = matrix[rowIndex] ?? [];
+
+    for (let columnIndex = 0; columnIndex < row.length - 1; columnIndex += 1) {
+      const leftHeader = normalizeHeader(row[columnIndex]);
+      const rightHeader = normalizeHeader(row[columnIndex + 1]);
+
+      if (leftHeader !== "frequency" || rightHeader !== "cell factor") {
+        continue;
+      }
+
+      for (let dataRowIndex = rowIndex + 1; dataRowIndex < matrix.length; dataRowIndex += 1) {
+        const dataRow = matrix[dataRowIndex] ?? [];
+        const frequency = toNumber(dataRow[columnIndex]);
+        const factor = toNumber(dataRow[columnIndex + 1]);
+
+        if (frequency == null || factor == null) {
+          if (cleanText(dataRow[columnIndex]) || cleanText(dataRow[columnIndex + 1])) {
+            continue;
+          }
+
+          break;
+        }
+
+        lookup.set(frequency, factor);
+      }
+    }
+  }
+
+  return lookup;
+}
+
+function getRawPeakFallback(
+  row: MatrixCell[],
+  headerIndexes: HeaderIndexes
+): number | undefined {
+  if (headerIndexes.graphIndex != null) {
+    const rawPeakAfterGraph = toNumber(row[headerIndexes.graphIndex + 1]);
+    if (rawPeakAfterGraph != null) return rawPeakAfterGraph;
+  }
+
+  if (headerIndexes.maxPeakIndex != null) {
+    const rawPeakAfterMaxPeak = toNumber(row[headerIndexes.maxPeakIndex + 2]);
+    if (rawPeakAfterMaxPeak != null) return rawPeakAfterMaxPeak;
+  }
+
+  return undefined;
+}
+
+function resolveMaxPeakValue(
+  row: MatrixCell[],
+  headerIndexes: HeaderIndexes,
+  frequencyValue: number | undefined,
+  factorLookup: Map<number, number>
+): number | undefined {
+  const parsedMaxPeak = toNumber(
+    headerIndexes.maxPeakIndex != null ? row[headerIndexes.maxPeakIndex] : undefined
+  );
+
+  if (parsedMaxPeak != null) {
+    return parsedMaxPeak;
+  }
+
+  const rawPeak = getRawPeakFallback(row, headerIndexes);
+  if (rawPeak == null) {
+    return undefined;
+  }
+
+  if (frequencyValue == null) {
+    return rawPeak;
+  }
+
+  const factor = factorLookup.get(frequencyValue);
+  return factor != null ? rawPeak + factor : rawPeak;
+}
+
 function getCellTextOrLink(
   sheet: ExcelJS.Worksheet,
   rowIndex: number,
@@ -111,6 +190,7 @@ function extractSectionRows(
   endRowIndexExclusive: number,
   headerIndexes: HeaderIndexes,
   unitType: string,
+  factorLookup: Map<number, number>,
   embeddedPhotos?: Map<string, string>,
   richValueImages?: Map<string, string>,
   vmMappings?: Map<string, string>
@@ -136,8 +216,11 @@ function extractSectionRows(
     const trpValue = toNumber(
       headerIndexes.trpIndex != null ? row[headerIndexes.trpIndex] : undefined
     );
-    const maxPeakValue = toNumber(
-      headerIndexes.maxPeakIndex != null ? row[headerIndexes.maxPeakIndex] : undefined
+    const maxPeakValue = resolveMaxPeakValue(
+      row,
+      headerIndexes,
+      frequencyValue,
+      factorLookup
     );
     const graphValue = getCellTextOrLink(sheet, rowIndex, headerIndexes.graphIndex);
     const photoValue =
@@ -196,6 +279,7 @@ function extractRowsFromMatrix(
   if (!matrix.length) return [];
 
   const parsedRows: ResultRow[] = [];
+  const factorLookup = buildFactorLookup(matrix);
   let rowIndex = 0;
 
   while (rowIndex < matrix.length) {
@@ -243,6 +327,7 @@ function extractRowsFromMatrix(
           sectionEndIndexExclusive,
           headerIndexes,
           unitType,
+          factorLookup,
           embeddedPhotos,
           richValueImages,
           vmMappings

@@ -125,6 +125,7 @@
   display: grid;
   grid-template-rows: auto auto minmax(0, 1fr);
   min-height: 0;
+  overflow: visible;
 }
 
 .setupPanelBody {
@@ -532,6 +533,7 @@ button.secondary {
 .filterMenuAnchor {
   position: relative;
   flex: 0 0 auto;
+  z-index: 30;
 }
 
 .filterToggleButton {
@@ -578,6 +580,8 @@ button.secondary {
   border: 1px solid var(--line-soft);
   box-shadow: 0 18px 34px rgba(15, 52, 104, 0.14);
   z-index: 25;
+  overflow-x: visible;
+  overflow-y: visible;
 }
 
 .filterMenuGrid {
@@ -628,11 +632,15 @@ button.secondary {
   left: 0;
   right: 0;
   padding: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  max-height: min(300px, calc(100vh - 280px));
   border-radius: 14px;
   background: rgba(255, 255, 255, 0.99);
   border: 1px solid var(--line-soft);
   box-shadow: 0 14px 28px rgba(15, 52, 104, 0.12);
-  z-index: 4;
+  z-index: 40;
+  overflow: hidden;
 }
 
 .filterSearchInput {
@@ -655,6 +663,8 @@ button.secondary {
 }
 
 .filterOptionList {
+  flex: 1 1 auto;
+  min-height: 0;
   max-height: 220px;
   overflow-y: auto;
 }

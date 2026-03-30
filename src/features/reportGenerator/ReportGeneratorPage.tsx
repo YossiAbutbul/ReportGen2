@@ -19,6 +19,9 @@ type FilterState = {
 };
 
 type FilterSearchState = Record<keyof FilterState, string>;
+type FilterDropdownPlacement = {
+  maxHeight: number;
+};
 
 const EMPTY_FILTERS: FilterState = {
   unitTypes: [],
@@ -30,6 +33,14 @@ const EMPTY_FILTER_SEARCH: FilterSearchState = {
   unitTypes: "",
   unitIds: "",
   frequencies: "",
+};
+const DEFAULT_FILTER_DROPDOWN_PLACEMENT: Record<
+  keyof FilterState,
+  FilterDropdownPlacement
+> = {
+  unitTypes: { maxHeight: 300 },
+  unitIds: { maxHeight: 300 },
+  frequencies: { maxHeight: 300 },
 };
 
 function formatFilterSummary(
@@ -121,6 +132,12 @@ export default function ReportGeneratorPage() {
     useState<FilterSearchState>(EMPTY_FILTER_SEARCH);
   const uploadMenuRef = useRef<HTMLDivElement | null>(null);
   const filterMenuRef = useRef<HTMLDivElement | null>(null);
+  const filterFieldRefs = useRef<Partial<Record<keyof FilterState, HTMLDivElement | null>>>(
+    {}
+  );
+  const [filterDropdownPlacements, setFilterDropdownPlacements] = useState(
+    DEFAULT_FILTER_DROPDOWN_PLACEMENT
+  );
 
   const filterOptions = useMemo(() => {
     if (!parsed) {
@@ -332,6 +349,36 @@ export default function ReportGeneratorPage() {
     setOpenFilterField(null);
   }
 
+  function updateFilterDropdownPlacement(key: keyof FilterState) {
+    const field = filterFieldRefs.current[key];
+    if (!field) return;
+
+    const trigger = field.querySelector(".filterSelectButton");
+    if (!(trigger instanceof HTMLElement)) return;
+
+    const triggerRect = trigger.getBoundingClientRect();
+    const viewportPadding = 16;
+    const minimumHeight = 140;
+    const preferredHeight = 300;
+    const spaceBelow = window.innerHeight - triggerRect.bottom - viewportPadding;
+    const availableSpace = spaceBelow;
+    const maxHeight = Math.max(
+      minimumHeight,
+      Math.min(preferredHeight, availableSpace - 12)
+    );
+
+    setFilterDropdownPlacements((current) => {
+      const nextPlacement = { maxHeight };
+      const currentPlacement = current[key];
+
+      if (currentPlacement.maxHeight === nextPlacement.maxHeight) {
+        return current;
+      }
+
+      return { ...current, [key]: nextPlacement };
+    });
+  }
+
   const activeFilterCount = useMemo(
     () => Object.values(filters).reduce((total, values) => total + values.length, 0),
     [filters]
@@ -359,6 +406,21 @@ export default function ReportGeneratorPage() {
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, [isFilterMenuOpen, isUploadMenuOpen]);
+
+  useEffect(() => {
+    if (!isFilterMenuOpen || !openFilterField) {
+      return;
+    }
+
+    const refreshPlacement = () => updateFilterDropdownPlacement(openFilterField);
+    refreshPlacement();
+
+    window.addEventListener("resize", refreshPlacement);
+
+    return () => {
+      window.removeEventListener("resize", refreshPlacement);
+    };
+  }, [isFilterMenuOpen, openFilterField]);
 
   useEffect(() => {
     setFilters((current) => {
@@ -674,16 +736,30 @@ export default function ReportGeneratorPage() {
                           });
 
                           return (
-                            <div key={key} className="filterField">
+                            <div
+                              key={key}
+                              className="filterField"
+                              ref={(node) => {
+                                filterFieldRefs.current[key] = node;
+                              }}
+                            >
                               <label>{labelMap[key]}</label>
                               <button
                                 type="button"
                                 className="filterSelectButton"
-                                onClick={() =>
-                                  setOpenFilterField((current) =>
-                                    current === key ? null : key
-                                  )
-                                }
+                                onClick={() => {
+                                  setOpenFilterField((current) => {
+                                    const nextField = current === key ? null : key;
+
+                                    if (nextField) {
+                                      window.requestAnimationFrame(() => {
+                                        updateFilterDropdownPlacement(nextField);
+                                      });
+                                    }
+
+                                    return nextField;
+                                  });
+                                }}
                               >
                                 <span>
                                   {formatFilterSummary(key, selectedValues)}
@@ -691,7 +767,12 @@ export default function ReportGeneratorPage() {
                               </button>
 
                               {isOpen ? (
-                                <div className="filterSelectMenu">
+                                <div
+                                  className="filterSelectMenu"
+                                  style={{
+                                    maxHeight: `${filterDropdownPlacements[key].maxHeight}px`,
+                                  }}
+                                >
                                   <input
                                     className="filterSearchInput"
                                     autoComplete="off"
