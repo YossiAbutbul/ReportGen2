@@ -6,10 +6,9 @@ It is designed to reduce manual work when handling test data, especially in work
 
 ## Live App
 
-<p align="center">
-  <a href="https://yossiabutbul.github.io/ReportGen2/" 
-     style="padding:10px 20px; background-color:#2ea44f; color:white; text-decoration:none; border-radius:6px; font-weight:bold;">
-    🚀 Open ReportGen2
+<p >
+  <a href="https://yossiabutbul.github.io/ReportGen2/">
+    <img src="https://img.shields.io/badge/Open-ReportGen2-blue?style=for-the-badge&logo=github" />
   </a>
 </p>
 
