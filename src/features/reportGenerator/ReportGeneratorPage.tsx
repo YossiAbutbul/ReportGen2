@@ -284,7 +284,10 @@ export default function ReportGeneratorPage() {
 
   function downloadTemplate() {
     const anchor = document.createElement("a");
-    anchor.href = "/report-generator-template.xlsx";
+    anchor.href = new URL(
+      "report-generator-template.xlsx",
+      window.location.origin + import.meta.env.BASE_URL
+    ).toString();
     anchor.download = "report-generator-template.xlsx";
     document.body.appendChild(anchor);
     anchor.click();
