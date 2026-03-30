@@ -22,3 +22,9 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Generated parser outputs
+extract_data_from_txt/__pycache__/
+extract_data_from_txt/trp_summary.xlsx
+extract_data_from_txt/_template_copy.xlsx
+extract_data_from_txt/_validation_output.xlsx
