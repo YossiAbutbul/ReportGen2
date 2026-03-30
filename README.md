@@ -6,9 +6,11 @@ It is designed to reduce manual work when handling test data, especially in work
 
 ## Live App
 
-<a href="https://yossiabutbul.github.io/ReportGen2/" target="_blank">
-  Open Live App
-</a>
+<p align="center">
+  <a href="https://yossiabutbul.github.io/ReportGen2/">
+    <img src="https://img.shields.io/badge/Open-ReportGen2-blue?style=for-the-badge&logo=github" />
+  </a>
+</p>
 
 ## What It Does
 
