@@ -866,6 +866,7 @@ td {
   padding: 1.5rem;
   background: rgba(14, 37, 71, 0.42);
   backdrop-filter: blur(6px);
+  z-index: 100;
 }
 
 .photoModal {
@@ -878,6 +879,7 @@ td {
   border-radius: 24px;
   background: rgba(248, 252, 255, 0.97);
   box-shadow: 0 24px 60px rgba(12, 63, 140, 0.2);
+  z-index: 101;
 }
 
 .photoModalClose {
