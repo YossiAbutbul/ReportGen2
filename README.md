@@ -4,14 +4,6 @@ ReportGen2 is a web-based utility for turning raw RF / lab Excel results into st
 
 It is designed to reduce manual work when handling test data, especially in workflows where multiple unit types, repeated measurements, and Word report exports are part of the process.
 
-## Live App
-
-<p >
-  <a href="https://yossiabutbul.github.io/ReportGen2/">
-    <img src="https://img.shields.io/badge/Open-ReportGen2-blue?style=for-the-badge&logo=github" />
-  </a>
-</p>
-
 ## What It Does
 
 - Parses Excel files containing test results across multiple worksheets
